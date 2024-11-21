@@ -1,5 +1,9 @@
 Funkčné požiadavky:
-	- Aplikácia umožňuje sledovanie metrík v čase.
+	- Aplikácia umožňuje:
+		1. Odoberať a pridavať súbory
+		2. Vyberať metriky
+		3. Nastavovať interval skenovania súboru
+		4. Vyberať spôsob grafického zobrazovania metrík v čase
 Nefunkčné požiadavky:
 
 	- Aplikácia je implementovaná v jazyku Python.
