@@ -29,7 +29,7 @@ def main():
         null_objects_json  = NullRecordCount()
         empty_record_count = EmptyRecordCount()
 
-        metric_type = input()
+        metric_type = input(f"Enter the metric type for file {os.path.basename(file_path)}: {file_type.name}: ")
         match metric_type:
             case "records":
                 print(f"Number of records in {os.path.basename(file_path)} is {record_count.calculate(data).value}")
