@@ -3,7 +3,7 @@ from typing import Any
 
 from pandas import DataFrame
 from datetime import datetime
-from Project.metric_value import MetricValue
+from metric_value import MetricValue
 
 
 # abstract Metric class

@@ -1,7 +1,7 @@
 import os.path
 import json
 import pandas as pd
-from Project.database_manager import DBManager
+from database_manager import DBManager
 from enums import FileType
 from data_monitor import DataMonitor
 from metric import RecordCount, EmptyRecordCount, NullObjectCount, EmptyObjectCount, DuplicateRecordCount

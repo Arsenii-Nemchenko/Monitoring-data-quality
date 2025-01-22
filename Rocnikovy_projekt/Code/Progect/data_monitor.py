@@ -1,8 +1,8 @@
 import os.path
 from time import sleep
 
-from Project.data_batch_file import DataBatchFile
-from Project.enums import FileType
+from data_batch_file import DataBatchFile
+from enums import FileType
 
 
 # DataMonitor class

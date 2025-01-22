@@ -6,8 +6,8 @@ import json
 import re
 import os
 
-from Project.database_manager import DBManager
-from Project.metric import Metric
+from database_manager import DBManager
+from metric import Metric
 from enums import FileType
 
 
