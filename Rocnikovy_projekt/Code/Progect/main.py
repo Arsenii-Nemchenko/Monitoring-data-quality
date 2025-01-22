@@ -16,8 +16,8 @@ def main():
 
     #Comment those two lines after processing files you want.
     # Results will be saved into db, so you can test whether values are stored in db and continue testing
-    monitor = DataMonitor("Monitored", folder, "Data", monitored_metrics, "json", manager)
-    monitor.start_monitoring()
+    #monitor = DataMonitor("Monitored", folder, "Data", monitored_metrics, "json", manager)
+    #monitor.start_monitoring()
 
     action = input("Enter action(database_test or metric_test): ")
     while action != "stop":
