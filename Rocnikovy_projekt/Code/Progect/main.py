@@ -1,47 +1,98 @@
 import os.path
-
+import json
+import pandas as pd
+from Project.database_manager import DBManager
 from enums import FileType
 from data_monitor import DataMonitor
-from data_batch_file import DataBatchFile
-from metric import RecordCount, EmptyRecordCount, NullRecordCount
-from metric_value import MetricValue
+from metric import RecordCount, EmptyRecordCount, NullObjectCount, EmptyObjectCount, DuplicateRecordCount
 
 def main():
     folder = input("Enter the folder path: ")
 
-    monitor = DataMonitor(folder)
-    files = monitor.new_files()
+    monitored_metrics = [RecordCount(), EmptyRecordCount(), NullObjectCount(), EmptyObjectCount(), DuplicateRecordCount()]
+    #You can connect to your db by changing arguments. I dont mind if you use mine
+    manager = create_db_manager("localhost","postgres", "postgres",
+                                "ArsGrez2024", monitored_metrics)
 
-    for file_path in files:
-        if file_path.endswith(".csv"):
-            file_type = FileType.CSV
-        elif file_path.endswith(".json"):
-            file_type = FileType.JSON
-        elif file_path.endswith(".parquet"):
-            file_type = FileType.PARQUET
-        else:
-            raise RuntimeError(f"Unsupported file type: {file_path}")
+    #Comment those two lines after processing files you want.
+    # Results will be saved into db, so you can test whether values are stored in db and continue testing
+    monitor = DataMonitor("Monitored", folder, "Data", monitored_metrics, "json", manager)
+    monitor.start_monitoring()
 
-        batch_file = DataBatchFile(file_path, file_type)
-        data = batch_file.load_data()
+    action = input("Enter action(database_test or metric_test): ")
+    while action != "stop":
+        match action:
+            case "database_test":
+                #Add to a folder your file before testing this
+                #I guess it covers data batch file test
+                file_name = input("Enter file name: ")
+                metric_name = input("Enter metric name: ")
+                file_type = input("Enter file format(Parquet, CSV or JSON)")
+                time_stamp = input("Enter expected time stamp: (just sequence of 14 digits as in file name)")
 
-        record_count = RecordCount()
-        null_objects_json  = NullRecordCount()
-        empty_record_count = EmptyRecordCount()
+                print(f"Stored value: {manager.get_value(file_name, metric_name, file_type, time_stamp)}")
 
-        metric_type = input(f"Enter the metric type for file {os.path.basename(file_path)}: {file_type.name}: ")
-        match metric_type:
-            case "records":
-                print(f"Number of records in {os.path.basename(file_path)} is {record_count.calculate(data).value}")
-            case "null_objects":
-                if file_type == FileType.JSON:
-                    print(f"Number of null objects in {os.path.basename(file_path)} is {null_objects_json.calculate(data).value}")
-                else:
-                    continue
-            case "empty_records":
-                if file_type is not FileType.JSON:
-                    print(f"Number of empty records in {os.path.basename(file_path)} is {empty_record_count.calculate(data).value}")
+            case "metric_test":
+
+                file_type = process_file_format(input("Enter file format: "))
+                file_name = input("Enter file name: ")
+
+                data = _get_parsed_data(file_type, os.path.join("/", folder)+ "\\"+ file_name+ "."+ file_type.value.lower())
+
+                metrics_for_test_json = [NullObjectCount(), EmptyObjectCount()]
+                other_metrics = [RecordCount(), EmptyRecordCount(), DuplicateRecordCount()]
+
+                match file_type:
+                    case FileType.JSON:
+                        for metric in metrics_for_test_json:
+                            print(f" Result of {metric.name} for {file_name} is {metric.calculate(data)}")
+
+                    case FileType.PARQUET:
+                        other_metrics_cl(file_name, other_metrics, data)
+                    case FileType.CSV:
+                        other_metrics_cl(file_name, other_metrics, data)
+                    case _:
+                        raise ValueError("Error!")
             case _:
-                raise RuntimeError(f"Unsupported metric type: {metric_type}")
+                action = input("Enter action(database_test or metric_test or stop): ")
+        action = input("Enter action(database_test or metric_test or stop): ")
+
+
+
+def create_db_manager(host, database, user, password, monitored_metrics):
+    return DBManager(host, database, user, password, monitored_metrics)
+
+def process_file_format(file_format: str):
+        match file_format:
+            case "JSON":
+                return FileType.JSON
+            case "CSV":
+                return FileType.CSV
+            case "Parquet":
+                return FileType.PARQUET
+            case _:
+                raise ValueError("Unsupported file format!")
+
+
+def _get_parsed_data(file_type, path):
+    match file_type:
+        case FileType.JSON:
+            with open(path, 'r') as file:
+                data = json.load(file)
+
+            return data
+        case FileType.CSV:
+            return pd.read_csv(path)
+        case FileType.PARQUET:
+            return pd.read_parquet(path)
+        case _:
+            raise ValueError(f"Unsupported file type: {file_type.value}")
+
+def other_metrics_cl(f_name, metrics, data):
+    for metric in metrics:
+        print(f" Result of {metric.name} for {f_name} is {metric.calculate(data).value}")
+
 
 main()
+
+
