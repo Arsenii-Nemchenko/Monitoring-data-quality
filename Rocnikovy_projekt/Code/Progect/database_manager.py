@@ -138,7 +138,7 @@ class DBManager:
                 cursor.execute("""
                     INSERT INTO calculated_metrics (file_id, metric_id, value)
                     VALUES (%s, %s, %s);
-                """, (file_id, metric_id, metric_value))
+                """, (int(file_id), int(metric_id), int(metric_value)))
 
         conn.commit()
 

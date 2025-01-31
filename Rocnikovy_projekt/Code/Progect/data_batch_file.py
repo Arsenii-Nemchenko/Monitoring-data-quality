@@ -59,8 +59,10 @@ class DataBatchFile:
             if self.file_type == FileType.JSON.value and metric.name != 'NullObjectCount' and metric.name != 'EmptyObjectCount':
                 continue
             else:
+                if self.file_type != FileType.JSON.value and (metric.name == 'NullObjectCount' or metric.name == 'EmptyObjectCount'):
+                    continue
                 result = metric.calculate(self._get_parsed_data())
-            self.db_manager.save(self.name, self.file_type, result.metric_name, str(self.time_stamp), result.value)
+                self.db_manager.save(self.name, self.file_type, result.metric_name, str(self.time_stamp), result.value)
 
     def get_metric_value(self, metric: Metric ):
         return self.db_manager.get_value(self.name, metric.name, self.file_type, self.time_stamp)
