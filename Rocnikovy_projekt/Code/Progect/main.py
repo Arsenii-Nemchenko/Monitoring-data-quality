@@ -32,32 +32,39 @@ def main():
 
                 print(f"Stored value: {manager.get_value(file_name, metric_name, file_type, time_stamp)}")
 
+                action = input("Enter action(database_test or metric_test or stop): ")
             case "metric_test":
 
                 file_type = process_file_format(input("Enter file format: "))
                 file_name = input("Enter file name: ")
 
-                data = _get_parsed_data(file_type, os.path.join("/", folder)+ "\\"+ file_name+ "."+ file_type.value.lower())
 
-                metrics_for_test_json = [NullObjectCount(), EmptyObjectCount()]
+                metrics_for_test_json = [RecordCount(), NullObjectCount(), EmptyObjectCount(), DuplicateRecordCount()]
                 other_metrics = [RecordCount(), EmptyRecordCount(), DuplicateRecordCount()]
+                data = None
 
                 match file_type:
                     case FileType.JSON:
                         for metric in metrics_for_test_json:
+                            data = get_data(metric.name)
                             print(f" Result of {metric.name} for {file_name} is {metric.calculate(data)}")
 
                     case FileType.PARQUET:
-                        other_metrics_cl(file_name, other_metrics, data)
+                        other_metrics_cl(file_name, file_type, other_metrics, folder)
+
                     case FileType.CSV:
-                        other_metrics_cl(file_name, other_metrics, data)
+                        other_metrics_cl(file_name, file_type, other_metrics, folder)
                     case _:
                         raise ValueError("Error!")
+                action = input("Enter action(database_test or metric_test or stop): ")
             case _:
                 action = input("Enter action(database_test or metric_test or stop): ")
-        action = input("Enter action(database_test or metric_test or stop): ")
 
 
+def get_data(name: str, file_type, folder, file_name):
+    return _get_parsed_data(file_type,
+                            os.path.join("/", folder) + "\\" + file_name + "." + file_type.value.lower(),
+                            name)
 
 def create_db_manager(host, database, user, password, monitored_metrics):
     return DBManager(host, database, user, password, monitored_metrics)
@@ -74,11 +81,13 @@ def process_file_format(file_format: str):
                 raise ValueError("Unsupported file format!")
 
 
-def _get_parsed_data(file_type, path):
+def _get_parsed_data(file_type, path, metric_name:str):
     match file_type:
         case FileType.JSON:
             with open(path, 'r') as file:
                 data = json.load(file)
+            if metric_name =='NullObjectCount' or metric_name == 'EmptyObjectCount':
+                data = pd.json_normalize(data)
 
             return data
         case FileType.CSV:
@@ -88,8 +97,9 @@ def _get_parsed_data(file_type, path):
         case _:
             raise ValueError(f"Unsupported file type: {file_type.value}")
 
-def other_metrics_cl(f_name, metrics, data):
+def other_metrics_cl(f_name, f_type, metrics, folder):
     for metric in metrics:
+        data = get_data(metric.name, f_type, folder, f_name)
         print(f" Result of {metric.name} for {f_name} is {metric.calculate(data).value}")
 
 

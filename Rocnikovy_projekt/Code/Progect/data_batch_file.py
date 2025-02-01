@@ -4,7 +4,6 @@ import pandas as pd
 
 import json
 import re
-import os
 
 from database_manager import DBManager
 from metric import Metric
@@ -38,11 +37,13 @@ class DataBatchFile:
 
         return name, timestamp, path
 
-    def _get_parsed_data(self):
+    def _get_parsed_data(self, metric_name: str):
         match self.file_type:
             case 'JSON':
                 with open(self.path, 'r') as file:
                     data = json.load(file)
+                if metric_name != 'NullObjectCount' or metric_name != 'EmptyObjectCount':
+                    data = pd.json_normalize(data)
 
                 return data
             case 'CSV':
@@ -56,12 +57,11 @@ class DataBatchFile:
 # It will be fixed after GUI implementation of changing of monitored metrics
     def compute_monitored_metrics(self):
         for metric in self.monitored_metrics:
-            if self.file_type == FileType.JSON.value and metric.name != 'NullObjectCount' and metric.name != 'EmptyObjectCount':
+            if self.file_type == FileType.JSON.value and metric.name == 'EmptyRecordCount' or (self.file_type != FileType.JSON.value and
+                        (metric.name == 'NullObjectCount' or metric.name == 'EmptyObjectCount')):
                 continue
             else:
-                if self.file_type != FileType.JSON.value and (metric.name == 'NullObjectCount' or metric.name == 'EmptyObjectCount'):
-                    continue
-                result = metric.calculate(self._get_parsed_data())
+                result = metric.calculate(self._get_parsed_data(metric.name))
                 self.db_manager.save(self.name, self.file_type, result.metric_name, str(self.time_stamp), result.value)
 
     def get_metric_value(self, metric: Metric ):
