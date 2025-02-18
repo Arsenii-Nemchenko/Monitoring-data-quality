@@ -97,4 +97,10 @@ class DuplicateRecordCount(Metric):
     def __init__(self):
         super().__init__("DuplicateCount")
     def calculate(self, data: DataFrame):
-        return MetricValue(self.name, data.duplicated().sum(), datetime.now())
+        empty_duplicates = 0
+        duplicates = data.duplicated()
+        for index, row in data.isna().iterrows():
+            if all(element for element in row) and duplicates[index]:
+                empty_duplicates += 1
+
+        return MetricValue(self.name, data.duplicated().sum()-empty_duplicates, datetime.now())

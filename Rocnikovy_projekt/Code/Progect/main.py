@@ -15,9 +15,9 @@ def main():
                                 "ArsGrez2024", monitored_metrics)
 
     #Comment those two lines after processing files you want.
-    # Results will be saved into db, so you can test whether values are stored in db and continue testing
-    #monitor = DataMonitor("Monitored", folder, "Data", monitored_metrics, "json", manager)
-    #monitor.start_monitoring()
+    #Results will be saved into db, so you can test whether values are stored in db and continue testing
+    monitor = DataMonitor("Monitored", folder, "Data", monitored_metrics, "csv", manager)
+    monitor.start_monitoring()
 
     action = input("Enter action(database_test or metric_test): ")
     while action != "stop":
@@ -46,7 +46,7 @@ def main():
                 match file_type:
                     case FileType.JSON:
                         for metric in metrics_for_test_json:
-                            data = get_data(metric.name)
+                            data = get_data(metric.name, file_type, folder, file_name)
                             print(f" Result of {metric.name} for {file_name} is {metric.calculate(data)}")
 
                     case FileType.PARQUET:
