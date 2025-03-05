@@ -295,4 +295,67 @@ class UniqueValuesCountJson(ColumnMetric):
             return sum(self._count_nulls(val, column, unique_values) for val in data)
         return 0
 
+class AverageValues(ColumnMetric):
+    def __init__(self):
+        super().__init__("AverageValues")
 
+    def _contains_numeric(self, data: DataFrame, column):
+        result = sum(1 if  isinstance(val, (int, float)) else 0 for val in data.loc[:,column])
+        return result, result > 0
+
+    def calculate(self, data: DataFrame, column = None) -> MetricValue:
+        if column is None:
+            raise ValueError("Column was not chosen!")
+
+        count, has_numeric = self._contains_numeric(data, column)
+
+        if not has_numeric:
+            return MetricValue(self.name, 0, datetime.now())
+
+        return MetricValue(self.name, int(sum(0 if pd.isna(val) or val=="" else float(val) for val in data.loc[:,column])/float(count)), datetime.now())
+
+
+
+class AverageValuesJson(ColumnMetric):
+    def __init__(self):
+        super().__init__("AverageValues")
+        self.counter = 0
+
+    def calculate(self, data: Any, column = "$") -> MetricValue:
+        self.counter = 0
+        if column is None:
+            raise ValueError("Column was not chosen!")
+
+        if column == "$":
+            return MetricValue(self.name,0, datetime.now())
+
+        if not self._valid_path(column):
+            raise ValueError("Wrong json-path!")
+        result = self._calculate_avg(data, column)
+
+        if self.counter == 0:
+            return MetricValue(self.name, 0, datetime.now())
+        return MetricValue(self.name, int(result/self.counter), datetime.now())
+
+    def _calculate_avg(self, data, column):
+        if data is None or data=='':
+            return 0
+        if isinstance(data, (int, float)):
+            self.counter+=1
+            return data
+
+        if isinstance(data, dict):
+            dot_position = column[1:].find(".")
+            if dot_position != -1:
+                name = column[1:dot_position + 1]
+                column = column[dot_position + 1:]
+            else:
+                name = column[1:]
+                column = ""
+
+            return sum(self._calculate_avg(val, column)
+                       if (val is not None and val == name) else 0 for val in data)
+
+        if isinstance(data, list):
+            return sum(self._calculate_avg(val, column) for val in data)
+        return 0
