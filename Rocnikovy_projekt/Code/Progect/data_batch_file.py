@@ -5,7 +5,6 @@ import pandas as pd
 import json
 import re
 
-from Progect.metric import DuplicateRecordCount
 from database_manager import DBManager
 from metric import Metric
 from enums import FileType
@@ -43,8 +42,8 @@ class DataBatchFile:
             case 'JSON':
                 with open(self.path, 'r') as file:
                     data = json.load(file)
-                if metric_name != 'NullObjectCount' and metric_name != 'EmptyObjectCount':
-                    data = pd.json_normalize(data)
+                    if metric_name != 'NullObjectCount' and metric_name != 'EmptyRecordCount':
+                        data = pd.json_normalize(data)
 
                 return data
             case 'CSV':
@@ -59,9 +58,9 @@ class DataBatchFile:
     def compute_monitored_metrics(self):
         for metric in self.monitored_metrics:
             if (self.file_type == FileType.JSON and metric.name != 'NullObjectCount'
-                    and metric.name !='EmptyObjectCount' and metric.name != 'DuplicateCount'):
+                    and metric.name !='EmptyRecordCount' and metric.name != 'DuplicateCount'):
                 continue
-            elif self.file_type != FileType.JSON and (metric.name == 'NullObjectCount' or metric.name == 'EmptyObjectCount'):
+            elif self.file_type != FileType.JSON and metric.name == 'NullObjectCount':
                 continue
             else:
                 result = metric.calculate(self._get_parsed_data(metric.name))
