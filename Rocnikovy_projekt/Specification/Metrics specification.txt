@@ -1,0 +1,167 @@
+Všeobecné metriky pre súbory formátu CSV, Parquet a Json.
+1.Record count
+	Metrika, ktorá počíta počet riadkov.
+
+	Výpočet prebieha na dátach spracovaných do dátovej štruktúry DataFrame, ktorú si možno predstaviť ako tabuľku. Výsledkom výpočtu je počet riadkov tabuľky (prázdne riadky sa nepočítajú).
+
+Pre JSON výsledok zodpovedá počtu objektov na najvyššej úrovni.
+	Príklad CSV:
+		Obsah súboru:
+		"
+		Name,Last Name,Age
+		John,Smith,42
+		,,
+		Kevin,Parker,14
+		Luna,Marblemaw,33
+		Ron,West,60
+		"
+		Výsledok výpočtu - 4
+	Priklad JSON:
+		Obsah súboru:
+			"
+			[
+			{
+			"Name": "Mike"
+			"Last name": "Hope"
+			"Age": 12
+			},
+			,
+			{
+			"Name": null
+			"Last name": null
+			"Age": null
+			},
+			{
+			"Name": Ren
+			"Last name": null
+			"Age": null
+			}
+			]
+			"
+			Tabuľka po spracovaní súboru:
+				Name|Last name|Age
+				Mike|Hope     |12
+				Null|Null     |Null
+				Null|Null     |Null
+				Ren |Null     |Null
+			Vysledok výpočtu - 2(Riadky, čo obsahujú aspoň jednu non-null hodnotu)
+2.Empty record count
+	Metrika, ktorá počíta počet prázdnych riadkov.
+
+	Pre CSV a Parquet sa započítavajú všetky riadky, v ktorých sú všetky hodnoty "" (prázdny reťazec) alebo null.
+	Pre JSON sa za prázdne považujú objekty obalené {} alebo [], v ktorých sú všetky hodnoty null, prázdne reťazce alebo prázdne objekty.
+	Priklad Json:
+		"
+		[          
+      {
+        "category": "reprehenderit",
+        "author": "Briana Mckinney",
+        "title": "Ipsum labore ea commodo in nulla nulla nostrud ex minim.",
+        "price": 84.9455
+      },
+      {
+        "category": "mollit",
+        "author": "Virgie Tucker",
+        "title": "Do elit anim consequat anim commodo laborum sint tempor.",
+        "price": 10.5096
+      },
+      {
+        "category": null,
+        "author": null,
+        "title": null,
+        "price": null
+      },
+      {
+        "category": "",
+        "author": "",
+        "title": "",
+        "price": ""
+      },
+      {},
+      {
+        "category": "nulla",
+        "author": "Hilary Ware",
+        "title": "Nulla consequat velit reprehenderit cillum eiusmod.",
+        "price": 50.9039
+      }
+		]
+		"
+	Výsledok výpočtu - 3
+
+
+
+	Ešte jeden príklad:
+		"
+		[
+		None,
+		{"fish": {"meat": None, "fat": ""} }
+		]
+		"
+	Záznam {"fish": {"meat": None, "fat": ""}} sa považuje za 2 prázdne objekty, síce jeden je vnorený v inom.
+	Výsledok výpočtu - 3
+
+3.Null object count
+	Metrika počítajúca počet null objektov.
+	Platí iba pre Json.
+	Null objekt je null hodnota, čo nie je flat-objektom.
+	[
+	null,
+	{
+	"Topping": null
+	},
+	{
+	"Topping":{"Sauce": null, "Vegetable": "Tomato"}
+	}
+	]
+	(Počíta sa len null hodnota na najvyššej úrovni)
+	Výsledok výpočtu - 1
+	
+	Ešte jeden:
+	[
+	null,
+	{"pizza":[{"dough": null}, null]}
+	]
+	(Počíta sa null hodnota na najvyššej úrovni a druhá honota null hodnota v "[{"dough": null}, null]". {"dough": null} nie je null objekt, lebo je objekt čo obsahuje null hodnotu)
+4.Duplicate count
+	Metrika, ktorá počíta počet duplicitných riadkov.
+
+	Prázdne riadky sa nepovažujú za duplicitné.
+	Pre JSON sa za duplicitný riadok považuje riadok tabuľky (z príkladu 1. Record count), ktorý obsahuje aspoň jednu non-null hodnotu a zároveň sa zhoduje vo všetkých hodnotách s nejakým predchádzajúcim riadkom v tabuľke.
+
+Metriky parametrizované stĺpcom / JSON cestou:
+Syntax json cesty - "$.first_layer.second_layer. ... .last_layer"
+1.Počet NULL/blank hodnôt v danom stĺpci / na danej ceste
+	Metrika, ktorá počíta počet null alebo prázdnych ("") hodnôt:
+
+	Pre CSV a Parquet sa počítajú null a prázdne hodnoty v danom stĺpci.
+	Pre JSON sa počítajú null a prázdne hodnoty nielen na konci cesty, ale aj v jej priebehu.
+	Priklad Json:
+		Cesta: "$.name"
+		[
+		{
+		"country": "Slovakia"
+		"name": ""
+		},
+		Null
+		]
+	Pocíta sa hodnota "name":"" a Null ako objekt čo obsahuje nič, teda null hodnotu.
+	Výsledok výpočtu - 2
+
+2.Počet záznamov, ktoré majú definovanú danú cestu (iba pre JSON)
+	Metrika počítajúca počet definovaných json-ciest v danej štruktúre.
+	Definovaná json-cesta je json-cesta ktorej všetky hodnoty na ceste sú non-null.
+
+
+3.Počet unikátnych hodnôt v danom stĺpci / na danej ceste
+	Metrika počítajúca počet unikatných hodnôt v stlpci.
+	Prázdne hodnoty None a "" nepovažujeme za unikatné.
+	
+	Pre json, ak sa cesta preruší None hodnota(nie je možné pokračovať) tak tuto json-vetvu narrateme ako aj v prípade, že na konci cesty je None alebo ""
+
+
+4.Priemerna hodnota pre stlpec/json-cestu
+	Metrika, ktorá počíta priemernú hodnotu v stĺpci, ak obsahuje číselné hodnoty.
+
+	Ak stĺpec neobsahuje číselné hodnoty alebo ak všetky jeho hodnoty sú None alebo "", výsledkom je 0.
+	Prázdne hodnoty sa nezapočítavajú ani do súčtu, ani do počtu hodnôt, ktorým sa potom delí.
+	Pre JSON sa sčítavajú všetky neprázdne hodnoty, ktoré sa nachádzajú na definovanej ceste, a ich súčet sa delí ich počtom.
