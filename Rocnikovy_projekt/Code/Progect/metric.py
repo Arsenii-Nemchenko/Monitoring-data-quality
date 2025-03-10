@@ -51,7 +51,7 @@ class EmptyRecordCount(Metric):
         else:
             return pd.isna(element)
 
-    def calculate(self, data: Any) -> MetricValue:
+    def calculate(self, data: DataFrame) -> MetricValue:
         empty = 0
         for index, row in data.iterrows():
 
