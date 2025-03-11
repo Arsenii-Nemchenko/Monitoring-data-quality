@@ -1,0 +1,71 @@
+{
+  "company": {
+    "name": "TechCorp",
+    "departments": [
+      {
+        "name": "Engineering",
+        "employees": [
+          {
+            "id": 101,
+            "name": "Alice",
+            "salary": 85000.5,
+            "skills": ["Python", "Machine Learning", "Data Science"],
+            "performance": {
+              "2023": {"rating": 4.5, "projects_completed": 5},
+              "2024": {"rating": 4.7, "projects_completed": 6}
+            }
+          },
+          {
+            "id": 102,
+            "name": "Bob",
+            "salary": 78000,
+            "skills": ["Java", "Spring", "Microservices"],
+            "performance": {
+              "2023": {"rating": 4.2, "projects_completed": 4},
+              "2024": {"rating": 4.4, "projects_completed": 5}
+            }
+          }
+        ]
+      },
+      {
+        "name": "Marketing",
+        "employees": [
+          {
+            "id": 201,
+            "name": "Charlie",
+            "salary": 65000,
+            "skills": ["SEO", "Content Strategy", "Google Ads"],
+            "performance": {
+              "2023": {"rating": 4.1, "campaigns_launched": 10},
+              "2024": {"rating": 4.3, "campaigns_launched": 12}
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "financials": {
+    "revenue": {
+      "2023": 5000000.75,
+      "2024": 6200000.25
+    },
+    "expenses": {
+      "2023": 3000000.5,
+      "2024": 3500000.75
+    }
+  },
+  "locations": [
+    {
+      "city": "New York",
+      "office_id": 1,
+      "employees": 50,
+      "monthly_rent": 25000
+    },
+    {
+      "city": "San Francisco",
+      "office_id": 2,
+      "employees": 35,
+      "monthly_rent": 40000
+    }
+  ]
+}
