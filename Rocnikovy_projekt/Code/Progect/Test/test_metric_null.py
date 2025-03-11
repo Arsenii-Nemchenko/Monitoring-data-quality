@@ -1,4 +1,3 @@
-import tempfile
 import json
 from unittest import TestCase
 
@@ -6,8 +5,8 @@ from Progect.metric import NullObjectCount
 
 class TestClass(TestCase):
     def test_null_object_Json_case1(self):
-        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_19null.json
-        file_path = input("Enter path to cs_weapons_12duplicate_19null.json: ")
+        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_19null_19nullcol.json
+        file_path = input("Enter path to cs_weapons_12duplicate_19null_19nullcol.json: ")
 
         with open(file_path, 'r') as file:
             loaded_data = json.load(file)

@@ -1,6 +1,5 @@
 import json
 from unittest import TestCase
-import tempfile
 import pandas as pd
 
 from Progect.metric import RecordCount
@@ -32,8 +31,8 @@ class TestClass(TestCase):
         self.assertEqual(result.value, 10)
 
     def test_record_count_Parquet_case2(self):
-        # Path to Test_files -> Parquet-cases -> car_owners_44rows.parquet
-        file_path = input("Enter path to car_owners_44rows.parquet: ")
+        # Path to Test_files -> Parquet-cases -> car_owners_44rows_15colnull.parquet
+        file_path = input("Enter path to car_owners_44rows_15colnull.parquet: ")
 
         result = RecordCount().calculate(data=pd.read_parquet(file_path))
         self.assertEqual(result.metric_name, "RecordCount")
@@ -52,8 +51,8 @@ class TestClass(TestCase):
         self.assertEqual(result.value, 1)
 
     def test_record_count_Json_case2(self):
-        # Path to Test_files -> JSON_cases -> catering_27records_1null_4empty.json
-        file_path = input("Enter path to catering_27records_1null_4empty.json: ")
+        # Path to Test_files -> JSON_cases -> catering_27records_4empty_26unique.json
+        file_path = input("Enter path to catering_27records_4empty_26unique.json: ")
 
         with open(file_path, 'r') as file:
             data = json.load(file)
