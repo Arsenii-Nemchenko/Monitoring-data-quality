@@ -16,6 +16,7 @@ from Progect.metric_value import MetricValue
 class Metric(ABC):
     def __init__(self, name):
         self.name = name
+        self.description = f"This is metric named {name}"
     @abstractmethod
     def calculate(self, data: Any) -> MetricValue:
         pass
@@ -41,6 +42,7 @@ class RecordCount(Metric):
             return all(self.is_na_or_empty(val) for val in element.values())
         else:
             return pd.isna(element)
+
 class EmptyRecordCount(Metric):
     def __init__(self):
         super().__init__("EmptyRecordCount")
@@ -63,7 +65,7 @@ class EmptyObjectCount(Metric):
     def __init__(self):
         super().__init__("EmptyRecordCount")
 
-    def calculate(self, data ):
+    def calculate(self, data):
         return MetricValue(self.name, self._count_empty(data), datetime.now())
 
     def _is_empty(self, value):
@@ -133,7 +135,7 @@ class DuplicateRecordCount(Metric):
                 return None
         return value
 
-    def calculate(self, data: pd.DataFrame):
+    def calculate(self, data: DataFrame):
         empty_duplicates = 0
 
         for col in data.columns:
@@ -151,6 +153,12 @@ class ColumnMetric(Metric):
     @abstractmethod
     def calculate(self, data: Any, column = None) -> MetricValue:
         pass
+
+class ColumnMetricJson(ColumnMetric):
+    @abstractmethod
+    def calculate(self, data: Any, column = None) -> MetricValue:
+        pass
+
     def _valid_path(self, path:str):
         pattern = r"^\$(\.[^.]+)+$"
         return bool(re.fullmatch(pattern, path))
@@ -161,7 +169,7 @@ class NullValuesCountColumn(ColumnMetric):
     def calculate(self, data: DataFrame, column = None) -> MetricValue:
         return MetricValue(self.name, sum(1 if pd.isna(value) or value=='' else 0 for value in data.loc[:,column]), datetime.now())
 
-class NullValuesCountJson(ColumnMetric):
+class NullValuesCountJson(ColumnMetricJson):
     def __init__(self):
         super().__init__("NullValuesCountColumn")
 
@@ -194,7 +202,7 @@ class NullValuesCountJson(ColumnMetric):
             return sum(self._count_nulls(val, column) for val in data)
         return 0
 
-class DefinedPathCount(ColumnMetric):
+class DefinedPathCount(ColumnMetricJson):
     def __init__(self):
         super().__init__("DefinedPathCount")
 
@@ -250,7 +258,7 @@ class UniqueValuesCount(ColumnMetric):
         unique_values = set()
         return MetricValue(self.name, sum(1 if self._is_unique(unique_values, value) else 0 for value in data.loc[:,column]), datetime.now())
 
-class UniqueValuesCountJson(ColumnMetric):
+class UniqueValuesCountJson(ColumnMetricJson):
     def __init__(self):
         super().__init__("UniqueCount")
 
@@ -295,9 +303,9 @@ class UniqueValuesCountJson(ColumnMetric):
             return sum(self._count_nulls(val, column, unique_values) for val in data)
         return 0
 
-class AverageValues(ColumnMetric):
+class AverageValue(ColumnMetric):
     def __init__(self):
-        super().__init__("AverageValues")
+        super().__init__("AverageValue")
 
     def _contains_numeric(self, data: DataFrame, column):
         result = sum(1 if  isinstance(val, (int, float)) else 0 for val in data.loc[:,column])
@@ -312,13 +320,13 @@ class AverageValues(ColumnMetric):
         if not has_numeric:
             return MetricValue(self.name, 0, datetime.now())
 
-        return MetricValue(self.name, int(sum(0 if pd.isna(val) or val=="" else float(val) for val in data.loc[:,column])/float(count)), datetime.now())
+        return MetricValue(self.name, round(sum(0 if pd.isna(val) or val=="" else float(val) for val in data.loc[:,column])/float(count), 2), datetime.now())
 
 
 
-class AverageValuesJson(ColumnMetric):
+class AverageValueJson(ColumnMetricJson):
     def __init__(self):
-        super().__init__("AverageValues")
+        super().__init__("AverageValue")
         self.counter = 0
 
     def calculate(self, data: Any, column = "$") -> MetricValue:
@@ -335,7 +343,7 @@ class AverageValuesJson(ColumnMetric):
 
         if self.counter == 0:
             return MetricValue(self.name, 0, datetime.now())
-        return MetricValue(self.name, int(result/self.counter), datetime.now())
+        return MetricValue(self.name, round(result/self.counter), datetime.now())
 
     def _calculate_avg(self, data, column):
         if data is None or data=='':
