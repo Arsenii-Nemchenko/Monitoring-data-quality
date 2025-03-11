@@ -174,11 +174,15 @@ class NullValuesCountJson(ColumnMetricJson):
         super().__init__("NullValuesCountColumn")
 
     def calculate(self, data: Any, column = "$") -> MetricValue:
+        if column is None:
+            raise ValueError("Column was not chosen!")
+
         if column == "$":
             return MetricValue(self.name,0, datetime.now())
 
         if not self._valid_path(column):
-            raise ValueError("Wrong json-path!")
+            return MetricValue("Wrong json-path!", 0, datetime.now())
+
 
         column = column[1:]
         return MetricValue(self.name, self._count_nulls(data, column), datetime.now())
@@ -211,10 +215,10 @@ class DefinedPathCount(ColumnMetricJson):
             raise ValueError("Column was not chosen!")
 
         if column == "$":
-            return MetricValue(self.name,0, datetime.now())
+            return MetricValue(self.name, 0, datetime.now())
 
         if not self._valid_path(column):
-            raise ValueError("Wrong json-path!")
+            return MetricValue("Wrong json-path!", 0, datetime.now())
 
         column = column[1:]
         return MetricValue(self.name, self._count_nulls(data, column), datetime.now())
@@ -276,7 +280,7 @@ class UniqueValuesCountJson(ColumnMetricJson):
             return MetricValue(self.name, 0, datetime.now())
 
         if not self._valid_path(column):
-            raise ValueError("Wrong json-path!")
+            return MetricValue("Wrong json-path!", 0, datetime.now())
 
         column = column[1:]
         unique_values = set()
@@ -308,8 +312,16 @@ class AverageValue(ColumnMetric):
         super().__init__("AverageValue")
 
     def _contains_numeric(self, data: DataFrame, column):
-        result = sum(1 if  isinstance(val, (int, float)) else 0 for val in data.loc[:,column])
-        return result, result > 0
+        numeric_count = 0
+        contains_string = False
+
+        for val in data[column]:
+            if isinstance(val, (int, float)) and not pd.isna(val):
+                numeric_count += 1
+            elif isinstance(val, str) and val.strip():
+                contains_string = True
+
+        return numeric_count, not contains_string
 
     def calculate(self, data: DataFrame, column = None) -> MetricValue:
         if column is None:
@@ -317,10 +329,10 @@ class AverageValue(ColumnMetric):
 
         count, has_numeric = self._contains_numeric(data, column)
 
-        if not has_numeric:
+        if not has_numeric or count == 0:
             return MetricValue(self.name, 0, datetime.now())
 
-        return MetricValue(self.name, round(sum(0 if pd.isna(val) or val=="" else float(val) for val in data.loc[:,column])/float(count), 2), datetime.now())
+        return MetricValue(self.name, int(sum(0 if pd.isna(val) or val=="" else float(val) for val in data.loc[:,column])/float(count)), datetime.now())
 
 
 
@@ -338,12 +350,14 @@ class AverageValueJson(ColumnMetricJson):
             return MetricValue(self.name,0, datetime.now())
 
         if not self._valid_path(column):
-            raise ValueError("Wrong json-path!")
+            return MetricValue("Wrong json-path!", 0, datetime.now())
+        column = column[1:]
         result = self._calculate_avg(data, column)
 
         if self.counter == 0:
             return MetricValue(self.name, 0, datetime.now())
-        return MetricValue(self.name, round(result/self.counter), datetime.now())
+
+        return MetricValue(self.name, int(result/self.counter), datetime.now())
 
     def _calculate_avg(self, data, column):
         if data is None or data=='':
@@ -351,6 +365,14 @@ class AverageValueJson(ColumnMetricJson):
         if isinstance(data, (int, float)):
             self.counter+=1
             return data
+
+        if isinstance(data, str):
+            try:
+                numeric_value = float(data) if "." in data else int(data)
+                self.counter += 1
+                return numeric_value
+            except ValueError:
+                return 0
 
         if isinstance(data, dict):
             dot_position = column[1:].find(".")
@@ -361,7 +383,7 @@ class AverageValueJson(ColumnMetricJson):
                 name = column[1:]
                 column = ""
 
-            return sum(self._calculate_avg(val, column)
+            return sum(self._calculate_avg(data[val], column)
                        if (val is not None and val == name) else 0 for val in data)
 
         if isinstance(data, list):
