@@ -5,19 +5,22 @@ from database_manager import DBManager
 from enums import FileType
 from data_monitor import DataMonitor
 from metric import RecordCount, EmptyRecordCount, NullObjectCount, EmptyObjectCount, DuplicateRecordCount
+from metric import NullValuesCountColumn, NullValuesCountJson, DefinedPathCount, UniqueValuesCountJson, UniqueValuesCount, AverageValue, AverageValueJson
 
 def main():
     folder = input("Enter the folder path: ")
 
     monitored_metrics = [RecordCount(), EmptyRecordCount(), NullObjectCount(), EmptyObjectCount(), DuplicateRecordCount()]
+
+    monitored_column_metrics = [NullValuesCountColumn(), NullValuesCountJson(), DefinedPathCount(), UniqueValuesCountJson(), UniqueValuesCount(), AverageValue(), AverageValueJson()]
     #You can connect to your db by changing arguments. I dont mind if you use mine
     manager = create_db_manager("localhost","postgres", "postgres",
-                                "ArsGrez2024", monitored_metrics)
+                                "ArsGrez2024", monitored_metrics+monitored_column_metrics)
 
     #Comment those two lines after processing files you want.
     #Results will be saved into db, so you can test whether values are stored in db and continue testing
-    #monitor = DataMonitor("Monitored", folder, "Data", monitored_metrics, "csv", manager)
-    #monitor.start_monitoring()
+    monitor = DataMonitor("Monitored", folder, "Data", monitored_metrics,monitored_column_metrics, "json", manager)
+    monitor.start_monitoring()
 
     action = input("Enter action(database_test or metric_test): ")
     while action != "stop":
