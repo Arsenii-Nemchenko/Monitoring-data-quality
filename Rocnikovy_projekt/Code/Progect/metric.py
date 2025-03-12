@@ -9,6 +9,7 @@ import json
 from pandas import DataFrame
 from datetime import datetime
 
+from Progect.enums import FileType
 from Progect.metric_value import MetricValue
 
 
@@ -17,6 +18,13 @@ class Metric(ABC):
     def __init__(self, name):
         self.name = name
         self.description = f"This is metric named {name}"
+        self.file_types = list(FileType)
+
+    def accept(self, file_type: FileType):
+        if any(file_type.value == val.value  for val in self.file_types):
+            return True
+        return False
+
     @abstractmethod
     def calculate(self, data: Any) -> MetricValue:
         pass
@@ -46,6 +54,7 @@ class RecordCount(Metric):
 class EmptyRecordCount(Metric):
     def __init__(self):
         super().__init__("EmptyRecordCount")
+        self.file_types = [FileType.CSV, FileType.PARQUET]
 
     def is_na_or_empty(self, element):
         if isinstance(element, str):
@@ -64,6 +73,7 @@ class EmptyRecordCount(Metric):
 class EmptyObjectCount(Metric):
     def __init__(self):
         super().__init__("EmptyRecordCount")
+        self.file_types = [FileType.JSON]
 
     def calculate(self, data):
         return MetricValue(self.name, self._count_empty(data), datetime.now())
@@ -96,6 +106,7 @@ class EmptyObjectCount(Metric):
 class NullObjectCount(Metric):
     def __init__(self):
         super().__init__("NullObjectCount")
+        self.file_types = [FileType.JSON]
 
     def calculate(self, data):
         return MetricValue(self.name, self._null_count(data), datetime.now())
@@ -150,11 +161,19 @@ class DuplicateRecordCount(Metric):
 
 
 class ColumnMetric(Metric):
+    def __init__(self, name):
+        super().__init__(name)
+        self.file_types = [FileType.CSV, FileType.PARQUET]
+
     @abstractmethod
     def calculate(self, data: Any, column = None) -> MetricValue:
         pass
 
-class ColumnMetricJson(ColumnMetric):
+class ColumnMetricJson(Metric):
+    def __init__(self, name):
+        super().__init__(name)
+        self.file_types = [FileType.JSON]
+
     @abstractmethod
     def calculate(self, data: Any, column = None) -> MetricValue:
         pass
@@ -181,7 +200,7 @@ class NullValuesCountJson(ColumnMetricJson):
             return MetricValue(self.name,0, datetime.now())
 
         if not self._valid_path(column):
-            return MetricValue("Wrong json-path!", 0, datetime.now())
+            raise ValueError("Wrong json-path!")
 
 
         column = column[1:]
@@ -218,7 +237,7 @@ class DefinedPathCount(ColumnMetricJson):
             return MetricValue(self.name, 0, datetime.now())
 
         if not self._valid_path(column):
-            return MetricValue("Wrong json-path!", 0, datetime.now())
+            raise ValueError("Wrong json-path!")
 
         column = column[1:]
         return MetricValue(self.name, self._count_nulls(data, column), datetime.now())
@@ -280,7 +299,7 @@ class UniqueValuesCountJson(ColumnMetricJson):
             return MetricValue(self.name, 0, datetime.now())
 
         if not self._valid_path(column):
-            return MetricValue("Wrong json-path!", 0, datetime.now())
+            raise ValueError("Wrong json-path!")
 
         column = column[1:]
         unique_values = set()
@@ -350,7 +369,7 @@ class AverageValueJson(ColumnMetricJson):
             return MetricValue(self.name,0, datetime.now())
 
         if not self._valid_path(column):
-            return MetricValue("Wrong json-path!", 0, datetime.now())
+            raise ValueError("Wrong json-path!")
         column = column[1:]
         result = self._calculate_avg(data, column)
 
