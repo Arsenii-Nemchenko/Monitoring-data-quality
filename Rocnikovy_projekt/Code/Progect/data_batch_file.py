@@ -11,9 +11,10 @@ from enums import FileType
 
 
 class DataBatchFile:
-
-    def __init__(self, file: str, monitored_metrics, file_type:FileType, db_manager: DBManager):
+    def __init__(self, file: str, monitored_metrics, monitored_column_metrics, column, file_type:FileType, db_manager: DBManager):
         self.monitored_metrics = monitored_metrics
+        self.monitored_column_metrics = monitored_column_metrics
+        self.column = column
         self.file_type = file_type
         self.name, self.time_stamp, self.path = self._parse_input(file)
         self.read = datetime.datetime.now()
@@ -42,7 +43,7 @@ class DataBatchFile:
             case 'JSON':
                 with open(self.path, 'r') as file:
                     data = json.load(file)
-                    if metric_name != 'NullObjectCount' and metric_name != 'EmptyRecordCount':
+                    if metric_name == "DuplicateCount" or metric_name == "RecordCount":
                         data = pd.json_normalize(data)
 
                 return data
@@ -57,14 +58,19 @@ class DataBatchFile:
 # It will be fixed after GUI implementation of changing of monitored metrics
     def compute_monitored_metrics(self):
         for metric in self.monitored_metrics:
-            if (self.file_type == FileType.JSON and metric.name != 'NullObjectCount'
-                    and metric.name !='EmptyRecordCount' and metric.name != 'DuplicateCount'):
-                continue
-            elif self.file_type != FileType.JSON and metric.name == 'NullObjectCount':
+            if not metric.accept(self.file_type):
                 continue
             else:
                 result = metric.calculate(self._get_parsed_data(metric.name))
                 self.db_manager.save(self.name, self.file_type.value, result.metric_name, str(self.time_stamp), result.value)
+
+        for metric in self.monitored_column_metrics:
+            if not metric.accept(self.file_type):
+                continue
+            else:
+                result = metric.calculate(self._get_parsed_data(metric.name), column=self.column)
+                self.db_manager.save(self.name, self.file_type.value, result.metric_name, str(self.time_stamp), result.value)
+
 
     def get_metric_value(self, metric: Metric ):
         return self.db_manager.get_value(self.name, metric.name, self.file_type, self.time_stamp)
