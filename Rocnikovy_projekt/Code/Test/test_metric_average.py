@@ -2,7 +2,7 @@ import json
 import pandas as pd
 from unittest import TestCase
 
-from Progect.metric import AverageValueJson, AverageValue
+from metric import AverageValueJson, AverageValue
 
 class TestClass(TestCase):
     def test_average_value_column_CSV_case1(self):

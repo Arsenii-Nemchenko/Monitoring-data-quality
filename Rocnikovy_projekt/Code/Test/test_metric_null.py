@@ -1,7 +1,7 @@
 import json
 from unittest import TestCase
 
-from Progect.metric import NullObjectCount
+from metric import NullObjectCount
 
 class TestClass(TestCase):
     def test_null_object_Json_case1(self):

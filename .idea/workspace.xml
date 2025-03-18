@@ -1,29 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="fb2a56a3-766d-4e0c-a5b0-e62e92153f48" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_average.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_defined_path.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_null_column.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_unique.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_duplicate.py" beforeDir="false" afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_duplicate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_empty.py" beforeDir="false" afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_empty.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_null.py" beforeDir="false" afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_null.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/Test/test_metric_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/metric.py" beforeDir="false" afterPath="$PROJECT_DIR$/Rocnikovy_projekt/Code/Progect/metric.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/CSV_cases/MORTALITY_AGE_SPECIFIC_BY_COUNTRY_8empty.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Json_cases/Gurteen_weather_4empty.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Json_cases/catering_27records_1null_4empty.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Json_cases/courses_13duplicate_1null.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Json_cases/cs_weapons_12duplicate_19null.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Json_cases/gas_supply_24empty.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Parquet_cases/car_owners_44rows.parquet" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Parquet_cases/catering_9empty.parquet" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Parquet_cases/complects_3empty.parquet" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Parquet_cases/markets_8duplicate.parquet" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Rocnikovy_projekt/Test_files/Parquet_cases/sales_10rows.parquet" beforeDir="false" />
-    </list>
+    <list default="true" id="fb2a56a3-766d-4e0c-a5b0-e62e92153f48" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

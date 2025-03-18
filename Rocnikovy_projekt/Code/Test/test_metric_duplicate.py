@@ -2,7 +2,7 @@ import pandas as pd
 import json
 from unittest import TestCase
 
-from Progect.metric import DuplicateRecordCount
+from metric import DuplicateRecordCount
 
 class TestClass(TestCase):
 

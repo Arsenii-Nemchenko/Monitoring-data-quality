@@ -2,7 +2,7 @@ import json
 from unittest import TestCase
 import pandas as pd
 
-from Progect.metric import RecordCount
+from metric import RecordCount
 
 
 class TestClass(TestCase):

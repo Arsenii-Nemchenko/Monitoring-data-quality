@@ -2,8 +2,8 @@ from unittest import TestCase
 import pandas as pd
 import json
 
-from Progect.metric import EmptyObjectCount
-from Progect.metric import EmptyRecordCount
+from metric import EmptyObjectCount
+from metric import EmptyRecordCount
 
 
 class TestClass(TestCase):

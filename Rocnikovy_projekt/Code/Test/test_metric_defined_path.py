@@ -1,7 +1,7 @@
 import json
 from unittest import TestCase
 
-from Progect.metric import DefinedPathCount
+from metric import DefinedPathCount
 
 class TestClass(TestCase):
 

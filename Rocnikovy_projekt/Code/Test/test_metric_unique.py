@@ -2,7 +2,7 @@ import json
 import pandas as pd
 from unittest import TestCase
 
-from Progect.metric import UniqueValuesCount, UniqueValuesCountJson
+from metric import UniqueValuesCount, UniqueValuesCountJson
 
 class TestClass(TestCase):
     def test_null_count_column_CSV_case1(self):
