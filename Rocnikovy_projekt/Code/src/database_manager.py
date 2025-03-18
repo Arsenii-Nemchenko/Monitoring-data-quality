@@ -1,5 +1,5 @@
 from psycopg2 import connect
-from enums import FileType
+from .enums import FileType
 
 class DBManager:
     def __init__(self, host, database, user, password, metrics):

@@ -5,9 +5,9 @@ import pandas as pd
 import json
 import re
 
-from database_manager import DBManager
-from metric import Metric
-from enums import FileType
+from .database_manager import DBManager
+from .metric import Metric
+from .enums import FileType
 
 
 class DataBatchFile:
@@ -74,5 +74,3 @@ class DataBatchFile:
 
     def get_metric_value(self, metric: Metric ):
         return self.db_manager.get_value(self.name, metric.name, self.file_type, self.time_stamp)
-
-

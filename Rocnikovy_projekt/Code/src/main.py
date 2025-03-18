@@ -1,11 +1,11 @@
 import os.path
 import json
 import pandas as pd
-from database_manager import DBManager
-from enums import FileType
-from data_monitor import DataMonitor
-from metric import RecordCount, EmptyRecordCount, NullObjectCount, EmptyObjectCount, DuplicateRecordCount
-from metric import NullValuesCountColumn, NullValuesCountJson, DefinedPathCount, UniqueValuesCountJson, UniqueValuesCount, AverageValue, AverageValueJson
+from .database_manager import DBManager
+from .enums import FileType
+from .data_monitor import DataMonitor
+from .metric import RecordCount, EmptyRecordCount, NullObjectCount, EmptyObjectCount, DuplicateRecordCount
+from .metric import NullValuesCountColumn, NullValuesCountJson, DefinedPathCount, UniqueValuesCountJson, UniqueValuesCount, AverageValue, AverageValueJson
 
 def main():
     folder = input("Enter the folder path: ")
