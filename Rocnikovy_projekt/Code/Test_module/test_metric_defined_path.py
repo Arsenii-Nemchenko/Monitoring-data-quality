@@ -21,10 +21,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "DefinedPathCount")
             self.assertEqual(result.value, 3)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_defined_count_Json_case2(self):
@@ -41,7 +41,7 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "DefinedPathCount")
             self.assertEqual(result.value, 4)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")

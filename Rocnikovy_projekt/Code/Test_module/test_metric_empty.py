@@ -18,10 +18,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "EmptyRecordCount")
             self.assertEqual(result.value, 8)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_empty_record_count_CSV_case2(self):
@@ -34,10 +34,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "EmptyRecordCount")
             self.assertEqual(result.value, 10)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_empty_record_count_Parquet_case1(self):
@@ -50,10 +50,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "EmptyRecordCount")
             self.assertEqual(result.value, 9)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_empty_record_count_Parquet_case2(self):
@@ -66,10 +66,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "EmptyRecordCount")
             self.assertEqual(result.value, 3)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
 
@@ -86,10 +86,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "EmptyRecordCount")
             self.assertEqual(result.value, 24)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
 
@@ -106,8 +106,8 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "EmptyRecordCount")
             self.assertEqual(result.value, 4)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError

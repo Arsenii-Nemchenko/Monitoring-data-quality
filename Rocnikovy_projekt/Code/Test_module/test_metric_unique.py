@@ -18,10 +18,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "UniqueCount")
             self.assertEqual(result.value, 14)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} column: {column}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
 
@@ -36,10 +36,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "UniqueCount")
             self.assertEqual(result.value, 284)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} column: {column}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_unique_count_column_Parquet_case1(self):
@@ -53,10 +53,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "UniqueCount")
             self.assertEqual(result.value, 5)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} column: {column}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_unique_count_column_Parquet_case2(self):
@@ -70,10 +70,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "UniqueCount")
             self.assertEqual(result.value, 3)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} column: {column}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_unique_count_column_Json_case1(self):
@@ -90,10 +90,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "UniqueCount")
             self.assertEqual(result.value, 6)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} path: {path}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} path: {path}")
             raise AssertionError
 
     def test_unique_count_column_Json_case2(self):
@@ -110,10 +110,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "UniqueCount")
             self.assertEqual(result.value, 26)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} path: {path}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} path: {path}")
             raise AssertionError
 
 

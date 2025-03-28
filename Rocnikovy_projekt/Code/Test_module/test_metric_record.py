@@ -17,10 +17,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "RecordCount")
             self.assertEqual(result.value, 37)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_record_count_CSV_case2(self):
@@ -33,10 +33,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "RecordCount")
             self.assertEqual(result.value, 557)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
 
@@ -50,10 +50,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "RecordCount")
             self.assertEqual(result.value, 10)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_record_count_Parquet_case2(self):
@@ -66,10 +66,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "RecordCount")
             self.assertEqual(result.value, 44)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
 
@@ -86,10 +86,10 @@ class TestClass(TestCase):
             result = RecordCount().calculate(data=df)
 
             self.assertEqual(result.value, 1)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_record_count_Json_case2(self):
@@ -105,8 +105,8 @@ class TestClass(TestCase):
             result = RecordCount().calculate(data=df)
 
             self.assertEqual(result.value, 27)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError

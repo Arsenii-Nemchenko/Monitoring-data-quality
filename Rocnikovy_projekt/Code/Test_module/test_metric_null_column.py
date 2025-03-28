@@ -18,10 +18,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
             self.assertEqual(result.value, 11)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} column: {column}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
 
@@ -36,10 +36,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
             self.assertEqual(result.value, 40)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} column: {column}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_null_count_column_Parquet_case1(self):
@@ -53,10 +53,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
             self.assertEqual(result.value, 15)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} column: {column}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_null_count_column_Parquet_case2(self):
@@ -70,10 +70,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
             self.assertEqual(result.value, 10)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} column: {column}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_null_count_column_Json_case1(self):
@@ -89,11 +89,11 @@ class TestClass(TestCase):
             result = NullValuesCountJson().calculate(data=loaded_data, column=path)
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} path: {path}")
         except ValueError:
             return
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} path: {path}")
             raise AssertionError
 
 
@@ -111,10 +111,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
             self.assertEqual(result.value, 9)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} path: {path}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} path: {path}")
             raise AssertionError
 
     def test_null_count_column_Json_case3(self):
@@ -131,9 +131,9 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
             self.assertEqual(result.value, 19)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)} path: {path}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} path: {path}")
             raise AssertionError
 

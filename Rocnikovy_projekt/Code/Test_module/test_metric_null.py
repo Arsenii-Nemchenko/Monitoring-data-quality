@@ -18,10 +18,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "NullObjectCount")
             self.assertEqual(result.value, 19)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
 
@@ -38,9 +38,9 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "NullObjectCount")
             self.assertEqual(result.value, 1)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 

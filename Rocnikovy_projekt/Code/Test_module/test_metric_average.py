@@ -18,9 +18,9 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "AverageValue")
             self.assertEqual(result.value, 23044745)
-            print(f"OK {name}")
+            print(f"OK {name.ljust(60)} column: {column}")
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
 
@@ -35,9 +35,9 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "AverageValue")
             self.assertEqual(result.value, 963)
-            print(f"OK {name}")
+            print(f"OK {name.ljust(60)} column: {column}")
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_average_value_column_Parquet_case1(self):
@@ -50,9 +50,9 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "AverageValue")
             self.assertEqual(result.value, 104)
-            print(f"OK {name}")
+            print(f"OK {name.ljust(60)} column: {column}")
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_average_value_column_Parquet_case2(self):
@@ -65,9 +65,9 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "AverageValue")
             self.assertEqual(result.value, 6)
-            print(f"OK {name}")
+            print(f"OK {name.ljust(60)} column: {column}")
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} column: {column}")
             raise AssertionError
 
     def test_average_value_column_Json_case1(self):
@@ -83,9 +83,9 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "AverageValue")
             self.assertEqual(result.value, 5)
-            print(f"OK {name}")
+            print(f"OK {name.ljust(60)} path: {path}")
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} path: {path}")
             raise AssertionError
 
     def test_average_value_column_Json_case2(self):
@@ -102,7 +102,7 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "AverageValue")
             self.assertEqual(result.value, 90)
-            print(f"OK {name}")
+            print(f"OK {name.ljust(60)} path: {path}")
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)} path: {path}")
             raise AssertionError

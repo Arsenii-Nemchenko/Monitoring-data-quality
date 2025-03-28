@@ -19,10 +19,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "DuplicateCount")
             self.assertEqual(result.value, 5)
-            print(f"OK {name}")
+            print(f"OK {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
 
     def test_duplicate_count_CSV_case2(self):
         # Path to Test_files -> CSV_cases -> house_price_557rows_12duplicate.csv
@@ -34,10 +34,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "DuplicateCount")
             self.assertEqual(result.value, 12)
-            print(f"OK {name}")
+            print(f"OK {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_duplicate_count_Parquet_case1(self):
@@ -50,10 +50,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "DuplicateCount")
             self.assertEqual(result.value, 12)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_duplicate_count_Parquet_case2(self):
@@ -66,10 +66,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "DuplicateCount")
             self.assertEqual(result.value, 8)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_duplicate_Json_case1(self):
@@ -86,10 +86,10 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "DuplicateCount")
             self.assertEqual(result.value, 12)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
 
     def test_duplicate_Json_case2(self):
@@ -106,8 +106,8 @@ class TestClass(TestCase):
 
             self.assertEqual(result.metric_name, "DuplicateCount")
             self.assertEqual(result.value, 13)
-            print(f"Ok {name}")
+            print(f"Ok {name.ljust(60)}")
 
         except AssertionError:
-            print(f"Fail {name}")
+            print(f"Fail {name.ljust(60)}")
             raise AssertionError
