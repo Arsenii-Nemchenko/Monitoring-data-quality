@@ -73,4 +73,4 @@ class DataBatchFile:
 
 
     def get_metric_value(self, metric: Metric ):
-        return self.db_manager.get_value(self.name, metric.name, self.file_type, self.time_stamp)
+        return self.db_manager.get_value(self.name, metric.name, self.file_type, self.time_stamp, column=self.column)

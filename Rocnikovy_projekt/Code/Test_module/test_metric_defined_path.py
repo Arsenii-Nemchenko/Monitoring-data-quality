@@ -11,7 +11,7 @@ class TestClass(TestCase):
         # Path to Test_files -> Json_cases -> Gurteen_weather_4empty_5defined_90avg.json
         name = "Gurteen_weather_4empty_5defined_90avg.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
-        path = "$.temperature"
+        path = "$[*].temperature"
 
         try:
             with open(file_path, 'r') as file:
@@ -31,7 +31,7 @@ class TestClass(TestCase):
         # Path to Test_files -> Json_cases -> gas_supply_24empty_9nullcol_4defined.json
         name = "gas_supply_24empty_9nullcol_4defined.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
-        path = "$.Corrib production"
+        path = "$[*].Corrib production"
 
         try:
             with open(file_path, 'r') as file:
@@ -45,3 +45,4 @@ class TestClass(TestCase):
 
         except AssertionError:
             print(f"Fail {name.ljust(60)}")
+            raise AssertionError

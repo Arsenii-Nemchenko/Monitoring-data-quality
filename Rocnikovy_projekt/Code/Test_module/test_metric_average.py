@@ -74,7 +74,7 @@ class TestClass(TestCase):
         # Path to Test_files -> Json_cases -> company_5avg.json
         name = "company_5avg.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
-        path = "$.company.departments.employees.performance.2024.projects_completed"
+        path = "$[*].company.departments[*].employees[*].performance.2024.projects_completed"
         try:
             with open(file_path, 'r') as file:
                 loaded_data = json.load(file)
@@ -82,7 +82,7 @@ class TestClass(TestCase):
             result = AverageValueJson().calculate(data=loaded_data, column=path)
 
             self.assertEqual(result.metric_name, "AverageValue")
-            self.assertEqual(result.value, 5)
+            self.assertEqual(result.value, 7)
             print(f"OK {name.ljust(60)} path: {path}")
         except AssertionError:
             print(f"Fail {name.ljust(60)} path: {path}")
@@ -92,7 +92,7 @@ class TestClass(TestCase):
         # Path to Test_files -> Json_cases -> Gurteen_weather_4empty_5defined_90avg.json
         name = "Gurteen_weather_4empty_5defined_90avg.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
-        path = "$.humidity"
+        path = "$[*].humidity"
 
         try:
             with open(file_path, 'r') as file:

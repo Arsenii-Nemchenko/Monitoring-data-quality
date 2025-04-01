@@ -6,8 +6,8 @@ from src.metric import NullObjectCount
 
 class TestClass(TestCase):
     def test_null_object_Json_case1(self):
-        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_19null_19nullcol.json
-        name = "cs_weapons_12duplicate_19null_19nullcol.json"
+        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_19null_2unique_13nullcol.json
+        name = "cs_weapons_12duplicate_19null_2unique_13nullcol.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
 
         try:
