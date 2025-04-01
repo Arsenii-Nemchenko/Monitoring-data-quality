@@ -9,8 +9,8 @@ import json
 from pandas import DataFrame
 from datetime import datetime
 
-from .enums import FileType
-from .metric_value import MetricValue
+from src.enums import FileType
+from src.metric_value import MetricValue
 
 
 # abstract Metric class
@@ -178,9 +178,49 @@ class ColumnMetricJson(Metric):
     def calculate(self, data: Any, column = None) -> MetricValue:
         pass
 
+    def _extract_name_and_column(self, column):
+        dot_position = column.find(".")
+        bracket_position = column.find("[")
+
+        if dot_position == -1 and bracket_position == -1:
+            name, column = column, ""
+        elif dot_position == -1 or (bracket_position != -1 and bracket_position < dot_position):
+            name, column = column[:bracket_position], column[bracket_position:]
+        else:
+            name = column[:dot_position]
+            column = column[dot_position + 1:]
+
+        return name, column
+
+    def _process_list(self, data, column, function):
+        if column.startswith("[*]"):
+            return sum(function(item, column[4:]) for item in data)
+
+        if column.startswith("["):
+            end_idx = column.find("]")
+            if end_idx != -1:
+                try:
+                    index = int(column[1:end_idx])
+                    if 0 <= index < len(data):
+                        return function(data[index], column[end_idx + 2:])
+                    else:
+                        raise IndexError(f"Index {index} is out of range")
+                except ValueError:
+                    pass
+        return 0
+
     def _valid_path(self, path:str):
-        pattern = r"^\$(\.[^.]+)+$"
+        pattern = r"^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$"
         return bool(re.fullmatch(pattern, path))
+
+    def _is_empty(self, value):
+        if value is None:
+            return True
+        if isinstance(value, str) and value.strip() == "":
+            return True
+        if isinstance(value, (list, dict)) and len(value) == 0:
+            return True
+        return False
 
 class NullValuesCountColumn(ColumnMetric):
     def __init__(self):
@@ -207,22 +247,21 @@ class NullValuesCountJson(ColumnMetricJson):
         return MetricValue(self.name, self._count_nulls(data, column), datetime.now())
 
     def _count_nulls(self, data, column):
-        if data is None or data == "":
+        if self._is_empty(data):
             return 1
-        if isinstance(data, dict):
-            dot_position = column[1:].find(".")
-            if dot_position != -1:
-                name = column[1:dot_position + 1]
-                column = column[dot_position + 1:]
-            else:
-                name = column[1:]
-                column = ""
+        if column == "":
+            return 0
 
-            return sum(self._count_nulls(data[val], column)
-                       if (val is not None and val == name) or val is None else 0 for val in data)
+        if isinstance(data, dict):
+            name, column = self._extract_name_and_column(column)
+            if name in data:
+                return self._count_nulls(data[name], column)
+            else:
+                raise KeyError(f"Key '{name}' not found in JSON object")
 
         if isinstance(data, list):
-            return sum(self._count_nulls(val, column) for val in data)
+            return self._process_list(data, column, self._count_nulls)
+
         return 0
 
 class DefinedPathCount(ColumnMetricJson):
@@ -240,27 +279,24 @@ class DefinedPathCount(ColumnMetricJson):
             raise ValueError("Wrong json-path!")
 
         column = column[1:]
-        return MetricValue(self.name, self._count_nulls(data, column), datetime.now())
+        return MetricValue(self.name, self._count(data, column), datetime.now())
 
-    def _count_nulls(self, data, column):
-        if data is None or data == "":
+
+    def _count(self, data, column):
+        if self._is_empty(data):
             return 0
-        if column=="":
+        if column == "":
             return 1
-        if isinstance(data, dict):
-            dot_position = column[1:].find(".")
-            if dot_position != -1:
-                name = column[1:dot_position + 1]
-                column = column[dot_position + 1:]
-            else:
-                name = column[1:]
-                column = ""
 
-            return sum(self._count_nulls(data[val], column)
-                       if (val is not None and val == name) else 0 for val in data)
+        if isinstance(data, dict):
+            name, column = self._extract_name_and_column(column)
+            if name in data:
+                return self._count(data[name], column)
+            else:
+                raise KeyError(f"Key '{name}' not found in JSON object")
 
         if isinstance(data, list):
-            return sum(self._count_nulls(val, column) for val in data)
+            return self._process_list(data, column, self._count)
         return 0
 
 class UniqueValuesCount(ColumnMetric):
@@ -284,11 +320,12 @@ class UniqueValuesCount(ColumnMetric):
 class UniqueValuesCountJson(ColumnMetricJson):
     def __init__(self):
         super().__init__("UniqueCount")
+        self.unique_values = set()
 
-    def _is_unique(self, unique_values: set, value):
-        if unique_values.__contains__(value):
+    def _is_unique(self, value):
+        if self.unique_values.__contains__(value):
             return False
-        unique_values.add(value)
+        self.unique_values.add(value)
         return True
 
     def calculate(self, data: Any, column= "$") -> MetricValue:
@@ -302,29 +339,28 @@ class UniqueValuesCountJson(ColumnMetricJson):
             raise ValueError("Wrong json-path!")
 
         column = column[1:]
-        unique_values = set()
-        return MetricValue(self.name, self._count_nulls(data, column, unique_values), datetime.now())
+        self.unique_values = set()
+        return MetricValue(self.name, self._count_unique(data, column), datetime.now())
 
-    def _count_nulls(self, data, column, unique_values: set):
-        if data is None or data=='':
+    def _count_unique(self, data, column):
+        if self._is_empty(data):
             return 0
-        if column == "" and self._is_unique(unique_values, data):
-            return 1
-        if isinstance(data, dict):
-            dot_position = column[1:].find(".")
-            if dot_position != -1:
-                name = column[1:dot_position + 1]
-                column = column[dot_position + 1:]
-            else:
-                name = column[1:]
-                column = ""
 
-            return sum(self._count_nulls(data[val], column, unique_values)
-                       if (val is not None and val == name) else 0 for val in data)
+        if column == "" and self._is_unique( data):
+            return 1
+
+        if isinstance(data, dict):
+            name, column = self._extract_name_and_column(column)
+            if name in data:
+                return self._count_unique(data[name], column)
+            else:
+                raise KeyError(f"Key '{name}' not found in JSON object")
 
         if isinstance(data, list):
-            return sum(self._count_nulls(val, column, unique_values) for val in data)
+            return self._process_list(data, column, self._count_unique)
+
         return 0
+
 
 class AverageValue(ColumnMetric):
     def __init__(self):
@@ -391,20 +427,15 @@ class AverageValueJson(ColumnMetricJson):
                 self.counter += 1
                 return numeric_value
             except ValueError:
-                return 0
+                raise ValueError(f"Json structure has non-numeric value on path")
 
         if isinstance(data, dict):
-            dot_position = column[1:].find(".")
-            if dot_position != -1:
-                name = column[1:dot_position + 1]
-                column = column[dot_position + 1:]
+            name, column = self._extract_name_and_column(column)
+            if name in data:
+                return self._calculate_avg(data[name], column)
             else:
-                name = column[1:]
-                column = ""
-
-            return sum(self._calculate_avg(data[val], column)
-                       if (val is not None and val == name) else 0 for val in data)
+                raise KeyError(f"Key '{name}' not found in JSON object")
 
         if isinstance(data, list):
-            return sum(self._calculate_avg(val, column) for val in data)
+            return self._process_list(data, column, self._calculate_avg)
         return 0
