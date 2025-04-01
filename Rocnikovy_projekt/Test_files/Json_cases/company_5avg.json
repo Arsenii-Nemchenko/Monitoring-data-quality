@@ -1,4 +1,4 @@
-{
+[{
   "company": {
     "name": "TechCorp",
     "departments": [
@@ -36,8 +36,8 @@
             "salary": 65000,
             "skills": ["SEO", "Content Strategy", "Google Ads"],
             "performance": {
-              "2023": {"rating": 4.1, "campaigns_launched": 10},
-              "2024": {"rating": 4.3, "campaigns_launched": 12}
+              "2023": {"rating": 4.1, "projects_completed": 10},
+              "2024": {"rating": 4.3, "projects_completed": 12}
             }
           }
         ]
@@ -69,3 +69,4 @@
     }
   ]
 }
+]
