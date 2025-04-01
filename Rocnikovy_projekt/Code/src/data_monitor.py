@@ -56,23 +56,10 @@ class DataMonitor:
             return []
 
     def start_monitoring(self):
-        print("Monitoring is started")
-        self.is_monitoring = True
+        input_files = self._new_files()
+        for file in input_files:
+            print(f"I read {file}")
 
-        while self.is_monitoring:
-            input_files = self._new_files()
-            for file in input_files:
-                print(f"I read {file}")
-
-                batch_file = DataBatchFile(file, self.monitored_metrics, self.monitored_column_metrics, self.column, self.file_format, self.db_manager)
-                batch_file.compute_monitored_metrics()
-                self.batch_files.append(batch_file)
-            sleep(self.monitor_interval)
-
-
-
-
-
-    def stopMonitoring(self):
-        print("Monitoring is stopped")
-        self.is_monitoring = False
+            batch_file = DataBatchFile(file, self.monitored_metrics, self.monitored_column_metrics, self.column, self.file_format, self.db_manager)
+            batch_file.compute_monitored_metrics()
+            self.batch_files.append(batch_file)
