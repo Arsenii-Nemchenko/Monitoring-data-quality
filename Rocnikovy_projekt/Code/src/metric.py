@@ -16,6 +16,7 @@ from src.metric_value import MetricValue
 # abstract Metric class
 class Metric(ABC):
     def __init__(self, name):
+        self.is_column_based = False
         self.name = name
         self.description = f"This is metric named {name}"
         self.file_types = list(FileType)
@@ -163,6 +164,7 @@ class DuplicateRecordCount(Metric):
 class ColumnMetric(Metric):
     def __init__(self, name):
         super().__init__(name)
+        self.is_column_based = True
         self.file_types = [FileType.CSV, FileType.PARQUET]
 
     @abstractmethod

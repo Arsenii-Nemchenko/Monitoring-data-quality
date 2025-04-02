@@ -1,3 +1,8 @@
+import os
+import shutil
+import threading
+import time
+
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -5,8 +10,7 @@ from jsonpath_ng import parse
 from jsonpath_ng.exceptions import JsonPathParserError
 import sys
 
-
-
+import src.database_manager
 from src.metric import *
 
 
@@ -29,7 +33,7 @@ class MultiSelectComboBox(QComboBox):
 
         self.options = options
         self.selected_options = set()
-        self.last_selected = None
+        self.last_selected = ""
         self.on_selection_change = on_selection_change
 
         for option in self.options:
@@ -79,6 +83,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Monitoring data quality")
+        self.resize(1500, 500)
 
         self.regular_metrics =  [RecordCount(), EmptyRecordCount(), NullObjectCount(), EmptyObjectCount(),
                              DuplicateRecordCount()]
@@ -86,9 +91,11 @@ class MainWindow(QMainWindow):
         self.column_metrics = [NullValuesCountColumn(), NullValuesCountJson(), DefinedPathCount(),
                                     UniqueValuesCountJson(), UniqueValuesCount(), AverageValue(), AverageValueJson()]
 
-
+        self.database_manager = src.database_manager.DBManager("localhost","postgres", "postgres",
+                                "ArsGrez2024", self.regular_metrics + self.column_metrics)
+        self.working_directory = None
         #Pivot layout
-        layout = QGridLayout()
+        layout = QHBoxLayout()
 
         layout1 = QVBoxLayout()
 
@@ -112,18 +119,34 @@ class MainWindow(QMainWindow):
                        background-color: #313764;
                    }
                """)
+        plus_button.clicked.connect(self._get_working_directory)
         layout_header.addWidget(header_name)
         layout_header.addWidget(plus_button)
+
+        #Current directory files
+        layout_directory_files = QHBoxLayout()
+        self.file_list = QListWidget()
+
+        layout_directory_files.addWidget(self.file_list)
+
+
+
 
         layout_buttons = QHBoxLayout()
         layout_buttons.setAlignment(Qt.AlignmentFlag.AlignTop)
         add_file_button = QPushButton("Add file")
         remove_file_button = QPushButton("Remove")
+
+        #Fuctionality
+        add_file_button.clicked.connect(self._add_file)
+
+
         layout_buttons.addWidget(add_file_button)
         layout_buttons.addWidget(remove_file_button)
 
-
+        #Adition to left pivot layout
         layout1.addLayout(layout_header)
+        layout1.addLayout(layout_directory_files)
         layout1.addLayout(layout_buttons)
 
 
@@ -165,9 +188,6 @@ class MainWindow(QMainWindow):
         layout2_1.addWidget(QLabel("Select Metrics:"))
         layout2_1.addWidget(self.select_metrics)
 
-        #To delete
-        layout2_1.addWidget(Color('red'))
-
         self.last_selected_metric = QLabel("Last selected: ")
 
         layout2_2 = QVBoxLayout()
@@ -182,7 +202,6 @@ class MainWindow(QMainWindow):
         self.show_metric.currentIndexChanged.connect(self.update_current_metric)
 
         layout2_2.addWidget(self.last_selected_metric)
-        layout2_2.addWidget(Color('green'))
 
         #Shown metric layout
         layout_shown_metric = QHBoxLayout()
@@ -208,14 +227,18 @@ class MainWindow(QMainWindow):
         layout2.addLayout(layout_shown_metric)
         layout2.addLayout(layout2_2)
 
-        layout.addLayout(layout1, 0, 0)
-        layout.addLayout(layout2, 0, 1)
+        layout.addLayout(layout1, 40)
+        layout.addLayout(layout2, 60)
 
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
 
         self.update_select_metrics()
+
+        #Daemon updating shown files in current directory
+        self.monitor_thread = threading.Thread(target=self._monitor_directory, daemon=True)
+        self.monitor_thread.start()
 
     def update_select_metrics(self):
         selected_types = self.metric_type_selector.selected_options
@@ -254,7 +277,7 @@ class MainWindow(QMainWindow):
         else:
             last_selected = self.select_metrics.last_selected
             self.last_selected_metric.setText(f"Last selected: {last_selected if last_selected else 'None'}")
-
+    #TODO
     def validate_jsonpath(self):
         jsonpath = self.line_edit.text()
         try:
@@ -262,6 +285,62 @@ class MainWindow(QMainWindow):
             return True
         except JsonPathParserError:
             return False
+
+    #Working with directory
+
+    def _filter_files(self, files):
+        result = []
+        file_types = self.database_manager.get_file_types()
+        for file in files:
+            for file_type in file_types:
+                if file.endswith(file_type[0].lower()):
+                    result.append(file)
+        return result
+
+
+    def _get_working_directory(self):
+        try:
+            self.working_directory = QFileDialog.getExistingDirectory()
+            files = self._filter_files(os.listdir(self.working_directory))
+
+            self.file_list.clear()
+            self.file_list.addItems(files)
+        except OSError:
+            self.file_list.clear()
+
+    def _add_file(self):
+        try:
+            file_path, _ = QFileDialog.getOpenFileName()
+
+            file_name = os.path.basename(file_path)
+            destination_path = os.path.join(self.working_directory, file_name)
+
+            shutil.copy(file_path, destination_path)
+
+            item = QListWidgetItem(file_name)
+            self.file_list.addItem(item)
+
+        except OSError:
+            pass
+        except Exception as e:
+            print(f"Error adding file: {e}")
+
+    #Constant file_list update
+    def _update_file_list(self):
+        if self.working_directory:
+            files = os.listdir(self.working_directory)
+            self.file_list.clear()
+            self.file_list.addItems(files)
+
+    def _monitor_directory(self):
+        while True:
+            self._update_file_list()
+            time.sleep(2)
+
+
+
+
+
 
 
 app = QApplication(sys.argv)

@@ -30,43 +30,42 @@ class DBManager:
             with self._connect() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("""
-                                    CREATE TABLE IF NOT EXISTS file_types (
-                                        f_type_id SERIAL PRIMARY KEY,
-                                        f_type VARCHAR(100) NOT NULL
-                                    );
-                                    """)
+                        CREATE TABLE IF NOT EXISTS file_types (
+                            f_type_id SERIAL PRIMARY KEY,
+                            f_type VARCHAR(100) NOT NULL UNIQUE
+                        );
+                    """)
 
                     cursor.execute("""
-                                    CREATE TABLE IF NOT EXISTS files (
-                                        file_id SERIAL PRIMARY KEY,
-                                        f_name VARCHAR(255) NOT NULL,
-                                        time TIMESTAMP NOT NULL,
-                                        f_type_id INTEGER NOT NULL REFERENCES file_types(f_type_id)
-                                    );
-                                    """)
+                        CREATE TABLE IF NOT EXISTS files (
+                            file_id SERIAL PRIMARY KEY,
+                            f_name VARCHAR(255) NOT NULL,
+                            time TIMESTAMP NOT NULL,
+                            f_type_id INTEGER NOT NULL REFERENCES file_types(f_type_id)
+                        );
+                    """)
 
                     cursor.execute("""
-                                    CREATE TABLE IF NOT EXISTS metrics (
-                                        metric_id SERIAL PRIMARY KEY,
-                                        metric_type VARCHAR(255) NOT NULL,
-                                        is_column_based BOOLEAN NOT NULL
-                                    );
-                                    """)
+                        CREATE TABLE IF NOT EXISTS metrics (
+                            metric_id SERIAL PRIMARY KEY,
+                            metric_type VARCHAR(255) NOT NULL UNIQUE,
+                            is_column_based BOOLEAN NOT NULL DEFAULT FALSE
+                        );
+                    """)
 
                     cursor.execute("""
-                                    CREATE TABLE IF NOT EXISTS calculated_metrics (
-                                            id SERIAL PRIMARY KEY,
-                                            file_id INTEGER NOT NULL REFERENCES files(file_id),
-                                            metric_id INTEGER NOT NULL REFERENCES metrics(metric_id),
-                                            value INTEGER NOT NULL,
-                                            column_name VARCHAR(255) NULL
-                                    );
-                                    """)
+                        CREATE TABLE IF NOT EXISTS calculated_metrics (
+                            id SERIAL PRIMARY KEY,
+                            file_id INTEGER NOT NULL REFERENCES files(file_id),
+                            metric_id INTEGER NOT NULL REFERENCES metrics(metric_id),
+                            value INTEGER NOT NULL,
+                            column_name VARCHAR(255) NULL
+                        );
+                    """)
 
             conn.commit()
         except DatabaseError as e:
             print(f"Error creating tables: {e}")
-
 
     def _insert_file_types(self):
         try:
@@ -75,10 +74,11 @@ class DBManager:
                     for file_type in FileType:
                         cursor.execute("""
                             INSERT INTO file_types (f_type) 
-                            VALUES (%s) ON CONFLICT (f_type) DO NOTHING;
+                            VALUES (%s) 
+                            ON CONFLICT (f_type) DO NOTHING;
                         """, (file_type.value,))
 
-                conn.commit()
+            conn.commit()
         except DatabaseError as e:
             print(f"Error inserting file types: {e}")
 
@@ -88,11 +88,13 @@ class DBManager:
                 with conn.cursor() as cursor:
                     for metric in self.metrics:
                         cursor.execute("""
-                            INSERT INTO metrics (metric_type) 
-                            VALUES (%s) ON CONFLICT (metric_type) DO NOTHING;
-                        """, (metric.name,))
+                            INSERT INTO metrics (metric_type, is_column_based) 
+                            VALUES (%s, %s) 
+                            ON CONFLICT (metric_type) DO UPDATE 
+                            SET is_column_based = EXCLUDED.is_column_based;
+                        """, (metric.name, metric.is_column_based))
 
-                conn.commit()
+            conn.commit()
         except DatabaseError as e:
             print(f"Error inserting metric types: {e}")
 
@@ -185,6 +187,24 @@ class DBManager:
         except ValueError as ve:
             print(f"Validation Error: {ve}")
             return None
+        except DatabaseError as de:
+            print(f"Database Error: {de}")
+            return None
+        except Exception as e:
+            print(f"Unexpected Error: {e}")
+            return None
+
+    def get_file_types(self):
+        try:
+            with self._connect() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                                        SELECT ft.f_type
+                                        FROM file_types ft
+                                        """)
+
+                    result = cursor.fetchall()
+                    return result
         except DatabaseError as de:
             print(f"Database Error: {de}")
             return None
