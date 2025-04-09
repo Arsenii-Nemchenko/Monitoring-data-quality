@@ -1,7 +1,3 @@
-import os
-import shutil
-import threading
-import time
 
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -10,19 +6,130 @@ from jsonpath_ng import parse
 from jsonpath_ng.exceptions import JsonPathParserError
 import sys
 
-import src.database_manager
+from src.database_manager import DBManager
+from src.data_monitor import DataMonitor
 from src.metric import *
 
-
-class Color(QWidget):
-
-    def __init__(self, color):
+class MonitoredFileWindow(QDialog):
+    def __init__(self, db_manager: DBManager):
         super().__init__()
-        self.setAutoFillBackground(True)
+        self.db_manager = db_manager
+        self.new_directory = None
+        self.selected_column = []
+        self.selected_regular = []
+        self.column = db_manager.get_column_metrics()
+        self.regular = db_manager.get_regular_metrics()
+        self.setWindowTitle("New monitored file setup")
+        self.resize(700, 300)
 
-        palette = self.palette()
-        palette.setColor(QPalette.Window, QColor(color))
-        self.setPalette(palette)
+        main_layout = QVBoxLayout()
+        base_layout = QHBoxLayout()
+        left_layout = QGridLayout()
+        right_layout = QGridLayout()
+
+        #Left layout
+        self.name_label = QLabel("Name:")
+        self.type_label = QLabel("File format:")
+
+        self.name_text = QLineEdit()
+        self.folder_button = QPushButton("Set folder")
+        self.file_type_selector = QComboBox()
+        self.add_button = QPushButton("Add")
+
+        file_types = db_manager.get_file_types()
+        for file_type in file_types:
+            self.file_type_selector.addItem(file_type)
+
+        self.folder_button.clicked.connect(self.get_working_directory)
+        self.add_button.clicked.connect(self._handle_add_click)
+
+        self.name_text.setPlaceholderText("Enter name")
+
+        left_layout.addWidget(self.name_label, 0, 0)
+        left_layout.addWidget(self.folder_button, 1, 0)
+        left_layout.addWidget(self.type_label, 2, 0)
+        left_layout.addWidget(self.add_button, 3, 0)
+
+        left_layout.addWidget(self.name_text, 0, 1)
+        left_layout.addWidget(self.file_type_selector, 2, 1)
+
+        #Right layout
+        self.metric_type_label = QLabel("Metric type:")
+        self.time_interval_label = QLabel("Time interval (seconds):")
+        self.select_metrics_label = QLabel("Select Metrics: ")
+
+        # Metric type
+        self.metric_type_selector = MultiSelectComboBox(["Regular", "Column"])
+        right_layout.addWidget(self.metric_type_label, 0, 0)
+        right_layout.addWidget(self.metric_type_selector, 0, 1)
+
+        # Time interval
+        self.time_interval_input_right = QSpinBox()
+        self.time_interval_input_right.setMinimum(1)
+        self.time_interval_input_right.setMaximum(3600)
+        self.time_interval_input_right.setValue(10)
+        right_layout.addWidget(self.time_interval_label, 1, 0)
+        right_layout.addWidget(self.time_interval_input_right, 1, 1)
+
+        # Select metrics
+        self.select_metrics = MultiSelectComboBox([])
+        self.select_metrics.on_selection_change = self._handle_selected_metrics
+        right_layout.addWidget(self.select_metrics_label, 2, 0)
+        right_layout.addWidget(self.select_metrics, 2, 1)
+
+        #Data description
+        layout = QHBoxLayout()
+        self.description_text = QTextEdit()
+        self.description_text.setPlaceholderText("Write a short description of the data here...")
+        layout.addWidget(self.description_text)
+
+        self.metric_type_selector.on_selection_change = self.update_select_metrics
+
+        base_layout.addLayout(left_layout, 40)
+        base_layout.addLayout(right_layout, 60)
+
+        main_layout.addLayout(base_layout, 60)
+        main_layout.addLayout(layout, 40)
+        self.setLayout(main_layout)
+
+    def get_working_directory(self):
+        self.new_directory = QFileDialog.getExistingDirectory()
+
+    def _handle_add_click(self):
+        self.accept()
+
+    def _handle_selected_metrics(self):
+        selected_metrics =self.select_metrics.selected_options
+
+        self.selected_column = []
+        self.selected_regular = []
+
+
+        for metric in selected_metrics:
+            if metric in self.column:
+                self.selected_column.append(metric)
+            elif metric in self.regular:
+                self.selected_regular.append(metric)
+
+
+    def update_select_metrics(self):
+        selected_types = self.metric_type_selector.selected_options
+
+        options = []
+        if "Regular" in selected_types and "Column" in selected_types:
+            metrics = self.db_manager.get_regular_metrics() + self.db_manager.get_column_metrics()
+            options = {m for m in metrics}
+        elif "Regular" in selected_types:
+            options = {m for m in self.db_manager.get_regular_metrics()}
+        elif "Column" in selected_types:
+            options = {m for m in self.db_manager.get_column_metrics()}
+
+        final_options = []
+        for option in options:
+            if option == "DefinedPathCount" and self.file_type_selector.currentText().lower() != 'json':
+                continue
+            final_options.append(option)
+        self.select_metrics.set_options(final_options)
 
 class MultiSelectComboBox(QComboBox):
     def __init__(self, options, on_selection_change=None):
@@ -66,6 +173,7 @@ class MultiSelectComboBox(QComboBox):
     def set_options(self, new_options):
         self.model.clear()
         self.selected_options.clear()
+        self.options = new_options
         self.last_selected = None
 
         for option in new_options:
@@ -91,9 +199,10 @@ class MainWindow(QMainWindow):
         self.column_metrics = [NullValuesCountColumn(), NullValuesCountJson(), DefinedPathCount(),
                                     UniqueValuesCountJson(), UniqueValuesCount(), AverageValue(), AverageValueJson()]
 
-        self.database_manager = src.database_manager.DBManager("localhost","postgres", "postgres",
-                                "ArsGrez2024", self.regular_metrics + self.column_metrics)
-        self.working_directory = None
+        self.database_manager = DBManager(self.regular_metrics + self.column_metrics)
+        self.working_directories = []
+        self.monitored_file_window = MonitoredFileWindow(self.database_manager)
+        self.monitored_files = {}
         #Pivot layout
         layout = QHBoxLayout()
 
@@ -101,8 +210,13 @@ class MainWindow(QMainWindow):
 
         layout_header = QHBoxLayout()
         layout_header.setSpacing(5)
-        layout_header.setAlignment(Qt.AlignmentFlag.AlignTop)
+        layout_header.setAlignment(Qt.AlignRight)
         header_name = QLabel("Add monitored file")
+
+
+        self.remove_file_button = QPushButton("Remove")
+        self.remove_file_button.clicked.connect(self.remove_selected_file)
+
         plus_button = QPushButton("+")
         plus_button.setFixedSize(50, 50)
         plus_button.setStyleSheet("""
@@ -120,8 +234,9 @@ class MainWindow(QMainWindow):
                    }
                """)
         plus_button.clicked.connect(self._get_working_directory)
-        layout_header.addWidget(header_name)
-        layout_header.addWidget(plus_button)
+        layout_header.addWidget(self.remove_file_button, 50)
+        layout_header.addWidget(header_name, 30)
+        layout_header.addWidget(plus_button, 20)
 
         #Current directory files
         layout_directory_files = QHBoxLayout()
@@ -132,22 +247,9 @@ class MainWindow(QMainWindow):
 
 
 
-        layout_buttons = QHBoxLayout()
-        layout_buttons.setAlignment(Qt.AlignmentFlag.AlignTop)
-        add_file_button = QPushButton("Add file")
-        remove_file_button = QPushButton("Remove")
-
-        #Fuctionality
-        add_file_button.clicked.connect(self._add_file)
-
-
-        layout_buttons.addWidget(add_file_button)
-        layout_buttons.addWidget(remove_file_button)
-
         #Adition to left pivot layout
         layout1.addLayout(layout_header)
         layout1.addLayout(layout_directory_files)
-        layout1.addLayout(layout_buttons)
 
 
 
@@ -236,28 +338,37 @@ class MainWindow(QMainWindow):
 
         self.update_select_metrics()
 
-        #Daemon updating shown files in current directory
-        self.monitor_thread = threading.Thread(target=self._monitor_directory, daemon=True)
-        self.monitor_thread.start()
+    def remove_selected_file(self):
+        selected_item = self.file_list.currentItem()
+        if selected_item:
+            name = selected_item.text()
+            if name in self.monitored_files:
+                temp = self.monitored_files[name]
+                directory = temp.folder
+                self.working_directories.remove(directory)
+                del self.monitored_files[name]
+
+            row = self.file_list.row(selected_item)
+            self.file_list.takeItem(row)
 
     def update_select_metrics(self):
         selected_types = self.metric_type_selector.selected_options
 
         new_options = []
         if "Regular" in selected_types and "Column" in selected_types:
-            options ={item.name for item in self.regular_metrics + self.column_metrics}
+            options ={item for item in self.database_manager.get_regular_metrics() + self.database_manager.get_column_metrics()}
             new_options = options
             self.select_metrics.addItems(options)
         elif "Regular" in selected_types:
-            options ={item.name for item in self.regular_metrics}
+            options ={item for item in self.database_manager.get_regular_metrics()}
             new_options = options
             self.select_metrics.addItems(options)
         elif "Column" in selected_types:
-            options ={item.name for item in self.column_metrics}
+            options ={item for item in self.database_manager.get_column_metrics()}
             new_options = options
             self.select_metrics.addItems(options)
 
-        self.select_metrics.set_options(new_options)
+        self.select_metrics.set_options(list(new_options))
 
     def update_shown_metric(self):
         selected_metrics = self.select_metrics.selected_options
@@ -287,55 +398,47 @@ class MainWindow(QMainWindow):
             return False
 
     #Working with directory
-
-    def _filter_files(self, files):
-        result = []
-        file_types = self.database_manager.get_file_types()
-        for file in files:
-            for file_type in file_types:
-                if file.endswith(file_type[0].lower()):
-                    result.append(file)
-        return result
-
-
     def _get_working_directory(self):
         try:
-            self.working_directory = QFileDialog.getExistingDirectory()
-            files = self._filter_files(os.listdir(self.working_directory))
+            self.monitored_file_window = MonitoredFileWindow(self.database_manager)
+            result = self.monitored_file_window.exec_()
 
-            self.file_list.clear()
-            self.file_list.addItems(files)
-        except OSError:
-            self.file_list.clear()
+            if result == QDialog.Accepted:
+                data_description = self.monitored_file_window.description_text.toPlainText()
+                metrics_selected = self.monitored_file_window.metric_type_selector.selected_options
+                metric_types_selected = self.monitored_file_window.metric_type_selector.selected_options
+                time_interval = self.monitored_file_window.time_interval_input_right.value()
+                selected_column_metrics = self.monitored_file_window.selected_column
+                selected_regular_metrics = self.monitored_file_window.selected_regular
+                new_directory = self.monitored_file_window.new_directory
+                name = self.monitored_file_window.name_text.text()
+                file_format = self.monitored_file_window.file_type_selector.currentText().lower()
 
-    def _add_file(self):
-        try:
-            file_path, _ = QFileDialog.getOpenFileName()
+                self.monitored_files[name] = DataMonitor(name, new_directory, data_description, selected_regular_metrics, selected_column_metrics, file_format,self.database_manager)
+                self.file_list.addItem(name)
 
-            file_name = os.path.basename(file_path)
-            destination_path = os.path.join(self.working_directory, file_name)
+                self.working_directories.append(new_directory)
 
-            shutil.copy(file_path, destination_path)
+                #Setting up the widgets according to the data
+                self.metric_type_selector.selected_options = set(metric_types_selected)
+                self.metric_type_selector.update_display()
+                self.update_select_metrics()
 
-            item = QListWidgetItem(file_name)
-            self.file_list.addItem(item)
+                for i in range(0, len(self.metric_type_selector.options)):
+                    if self.metric_type_selector.options[i] in metric_types_selected:
+                        self.metric_type_selector.handle_selection(i)
 
+                selected_help = selected_column_metrics + selected_regular_metrics
+                self.select_metrics.selected_options = set(selected_help)
+                self.select_metrics.update_display()
+                for i in range(0, len(self.select_metrics.options)):
+                    if self.select_metrics.options[i] in selected_help:
+                        self.select_metrics.handle_selection(i)
+
+                self.time_interval_input.setValue(time_interval)
         except OSError:
             pass
-        except Exception as e:
-            print(f"Error adding file: {e}")
 
-    #Constant file_list update
-    def _update_file_list(self):
-        if self.working_directory:
-            files = os.listdir(self.working_directory)
-            self.file_list.clear()
-            self.file_list.addItems(files)
-
-    def _monitor_directory(self):
-        while True:
-            self._update_file_list()
-            time.sleep(2)
 
 
 
