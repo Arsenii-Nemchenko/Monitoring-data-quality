@@ -1,13 +1,17 @@
+import os
+from dotenv import load_dotenv
+
 from psycopg2 import connect
 from psycopg2 import sql, DatabaseError, IntegrityError
 from .enums import FileType
 
+load_dotenv()
 class DBManager:
-    def __init__(self, host, database, user, password, metrics):
-        self.host = host
-        self.database = database
-        self.user = user
-        self.password = password
+    def __init__(self, metrics):
+        self.host=os.getenv("DB_HOST")
+        self.database = os.getenv("DB_NAME")
+        self.user = os.getenv("DB_USER")
+        self.password = os.getenv("DB_PASSWORD")
         self.metrics = metrics
         self._create_tables()
         self._insert_file_types()
@@ -49,7 +53,7 @@ class DBManager:
                         CREATE TABLE IF NOT EXISTS metrics (
                             metric_id SERIAL PRIMARY KEY,
                             metric_type VARCHAR(255) NOT NULL UNIQUE,
-                            is_column_based BOOLEAN NOT NULL DEFAULT FALSE
+                            is_column_based BOOLEAN NOT NULL
                         );
                     """)
 
@@ -182,7 +186,7 @@ class DBManager:
                                             """, (file_name, metric_type, file_format, time_stamp))
 
                     result = cursor.fetchall()
-                    return result
+                    return [row[0] for row in result]
 
         except ValueError as ve:
             print(f"Validation Error: {ve}")
@@ -204,7 +208,43 @@ class DBManager:
                                         """)
 
                     result = cursor.fetchall()
-                    return result
+                    return [item[0] for item in result]
+        except DatabaseError as de:
+            print(f"Database Error: {de}")
+            return None
+        except Exception as e:
+            print(f"Unexpected Error: {e}")
+            return None
+
+    def get_regular_metrics(self):
+        try:
+            with self._connect() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT m.metric_type
+                        FROM metrics m
+                        WHERE m.is_column_based = FALSE
+                    """)
+                    result = cursor.fetchall()
+                    return [row[0] for row in result]
+        except DatabaseError as de:
+            print(f"Database Error: {de}")
+            return None
+        except Exception as e:
+            print(f"Unexpected Error: {e}")
+            return None
+
+    def get_column_metrics(self):
+        try:
+            with self._connect() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT m.metric_type
+                        FROM metrics m
+                        WHERE m.is_column_based = TRUE
+                    """)
+                    result = cursor.fetchall()
+                    return [row[0] for row in result]
         except DatabaseError as de:
             print(f"Database Error: {de}")
             return None

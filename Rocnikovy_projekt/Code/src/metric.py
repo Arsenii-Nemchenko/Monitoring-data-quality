@@ -174,6 +174,7 @@ class ColumnMetric(Metric):
 class ColumnMetricJson(Metric):
     def __init__(self, name):
         super().__init__(name)
+        self.is_column_based = True
         self.file_types = [FileType.JSON]
 
     @abstractmethod
