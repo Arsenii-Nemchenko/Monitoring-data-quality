@@ -10,8 +10,8 @@ from src.metric import DuplicateRecordCount
 class TestClass(TestCase):
 
     def test_duplicate_count_CSV_case1(self):
-        #Path to Test_files -> CSV_cases -> cars_37rows_3empty_4duplicate.csv
-        name = "cars_37rows_3empty_4duplicate.csv"
+        #Path to Test_files -> CSV_cases -> cars_37rows_3empty_5duplicate.csv
+        name = "cars_37rows_3empty_5duplicate.csv"
         file_path = os.path.join("..", "Test_files", "CSV_cases", name)
 
         try:
@@ -73,8 +73,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_duplicate_Json_case1(self):
-        # Path to Test_files -> JSON_cases -> cs_weapons_12duplicate_19null_2unique_13nullcol.json
-        name = "cs_weapons_12duplicate_19null_2unique_13nullcol.json"
+        # Path to Test_files -> JSON_cases -> cs_weapons_12duplicate_2null_2unique_13nullcol.json
+        name = "cs_weapons_12duplicate_2null_2unique_13nullcol.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
 
         try:

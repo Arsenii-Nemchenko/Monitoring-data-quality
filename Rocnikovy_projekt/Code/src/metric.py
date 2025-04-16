@@ -33,6 +33,7 @@ class Metric(ABC):
 class RecordCount(Metric):
     def __init__(self):
         super().__init__("RecordCount")
+        self.file_types = [FileType.CSV, FileType.PARQUET]
 
     def calculate(self, data : DataFrame):
         empty = 0
@@ -41,7 +42,6 @@ class RecordCount(Metric):
             if all(self.is_na_or_empty(element) for element in row):
                 empty += 1
         return MetricValue(self.name ,data.shape[0]-empty, datetime.now())
-
     def is_na_or_empty(self, element):
         if isinstance(element, str):
             return element == ""
@@ -94,14 +94,12 @@ class EmptyObjectCount(Metric):
         return False
 
     def _count_empty(self, data):
-        if data is None:
-            return 1
-        if isinstance(data, dict):
+        if isinstance(data, list):
             count = 1 if self._is_empty_object(data) else 0
-            count += sum(self._count_empty(value) if isinstance(value, (dict, list)) else 0 for value in data.values())
+            count += sum(1 if self._is_empty_object(value) else 0 for value in data)
             return count
-        elif isinstance(data, list):
-            return sum(self._count_empty(item) for item in data)
+        elif isinstance(data, dict):
+            raise ValueError("Wrong json file structure!")
         return 0
 
 class NullObjectCount(Metric):
@@ -112,23 +110,11 @@ class NullObjectCount(Metric):
     def calculate(self, data):
         return MetricValue(self.name, self._null_count(data), datetime.now())
 
-    def _no_nested_list(self, data, value):
-        if data is None:
-            return True
-        if isinstance(data.get(value), (dict, list)):
-            return True
-
-
     def _null_count(self, data):
         if data is None:
             return 1
-        elif isinstance(data, list):
+        return sum(1 if item is None else 0 for item in data)
 
-            return sum(self._null_count(value) for value in data)
-        elif isinstance(data, dict):
-
-            return sum(self._null_count(data.get(value)) if self._no_nested_list(data, value) else 0  for value in data)
-        return 0
 
 
 
@@ -178,26 +164,63 @@ class ColumnMetricJson(Metric):
         self.file_types = [FileType.JSON]
 
     @abstractmethod
-    def calculate(self, data: Any, column = None) -> MetricValue:
+    def calculate(self, data: Any, column=None) -> MetricValue:
         pass
 
-    def _extract_name_and_column(self, column):
-        dot_position = column.find(".")
-        bracket_position = column.find("[")
+    def _extract_name_and_column(self, column: str):
+        if column.startswith('["'):
+            end_idx = column.find('"]')
+            if end_idx != -1:
+                name = column[2:end_idx]
+                remainder = column[end_idx + 2:]
+                if remainder.startswith('.'):
+                    remainder = remainder[1:]
+                return name, remainder
 
-        if dot_position == -1 and bracket_position == -1:
-            name, column = column, ""
-        elif dot_position == -1 or (bracket_position != -1 and bracket_position < dot_position):
-            name, column = column[:bracket_position], column[bracket_position:]
+        # Handle list access: [index] or [*]
+        if column.startswith('['):
+            end_idx = column.find(']')
+            if end_idx != -1:
+                name = column[:end_idx + 1]
+                remainder = column[end_idx + 1:]
+                if remainder.startswith('.'):
+                    remainder = remainder[1:]
+                return name, remainder
+
+        # Handle dot notation: normal key
+        dot_idx = column.find('.')
+        bracket_idx = column.find('[')
+
+        if dot_idx == -1 and bracket_idx == -1:
+            return column, ""
+
+        if bracket_idx != -1 and (dot_idx == -1 or bracket_idx < dot_idx):
+            name = column[:bracket_idx]
+            remainder = column[bracket_idx:]
         else:
-            name = column[:dot_position]
-            column = column[dot_position + 1:]
+            name = column[:dot_idx]
+            remainder = column[dot_idx + 1:]
 
-        return name, column
+        return name, remainder
+
+    def _get_value(self, data, name):
+        if name.startswith('['):
+            if name == '[*]':
+                return data
+            try:
+                index = int(name[1:-1])
+                return data[index]
+            except (ValueError, IndexError, TypeError):
+                raise KeyError(f"Invalid list access: {name}")
+        else:
+            return data[name]
 
     def _process_list(self, data, column, function):
         if column.startswith("[*]"):
-            return sum(function(item, column[4:]) for item in data)
+            column = column[3:]
+            if column.startswith("."):
+                column = column[1:]
+            return sum(function(item, column) for item in data)
 
         if column.startswith("["):
             end_idx = column.find("]")
@@ -205,15 +228,18 @@ class ColumnMetricJson(Metric):
                 try:
                     index = int(column[1:end_idx])
                     if 0 <= index < len(data):
-                        return function(data[index], column[end_idx + 2:])
+                        column = column[end_idx + 2:]
+                        if column.startswith("."):
+                            column = column[1:]
+                        return function(data[index], column)
                     else:
                         raise IndexError(f"Index {index} is out of range")
                 except ValueError:
                     pass
         return 0
 
-    def _valid_path(self, path:str):
-        pattern = r"^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$"
+    def _valid_path(self, path: str):
+        pattern = r'^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$'
         return bool(re.fullmatch(pattern, path))
 
     def _is_empty(self, value):
@@ -293,9 +319,9 @@ class DefinedPathCount(ColumnMetricJson):
 
         if isinstance(data, dict):
             name, column = self._extract_name_and_column(column)
-            if name in data:
-                return self._count(data[name], column)
-            else:
+            try:
+                return self._count(self._get_value(data, name), column)
+            except KeyError:
                 raise KeyError(f"Key '{name}' not found in JSON object")
 
         if isinstance(data, list):
@@ -354,9 +380,9 @@ class UniqueValuesCountJson(ColumnMetricJson):
 
         if isinstance(data, dict):
             name, column = self._extract_name_and_column(column)
-            if name in data:
-                return self._count_unique(data[name], column)
-            else:
+            try:
+                return self._count_unique(self._get_value(data, name), column)
+            except KeyError:
                 raise KeyError(f"Key '{name}' not found in JSON object")
 
         if isinstance(data, list):
@@ -390,7 +416,7 @@ class AverageValue(ColumnMetric):
         if not has_numeric or count == 0:
             return MetricValue(self.name, 0, datetime.now())
 
-        return MetricValue(self.name, int(sum(0 if pd.isna(val) or val=="" else float(val) for val in data.loc[:,column])/float(count)), datetime.now())
+        return MetricValue(self.name, int(round(sum(0 if pd.isna(val) or val=="" else float(val) for val in data.loc[:,column])/float(count))), datetime.now())
 
 
 
@@ -399,46 +425,41 @@ class AverageValueJson(ColumnMetricJson):
         super().__init__("AverageValue")
         self.counter = 0
 
-    def calculate(self, data: Any, column = "$") -> MetricValue:
+    def calculate(self, data: Any, column="$") -> MetricValue:
         self.counter = 0
         if column is None:
             raise ValueError("Column was not chosen!")
 
         if column == "$":
-            return MetricValue(self.name,0, datetime.now())
+            return MetricValue(self.name, 0, datetime.now())
 
         if not self._valid_path(column):
             raise ValueError("Wrong json-path!")
+
         column = column[1:]
         result = self._calculate_avg(data, column)
 
         if self.counter == 0:
             return MetricValue(self.name, 0, datetime.now())
 
-        return MetricValue(self.name, int(result/self.counter), datetime.now())
+        return MetricValue(self.name, int(round(result / self.counter)), datetime.now())
 
     def _calculate_avg(self, data, column):
-        if data is None or data=='':
+        if data is None or data == "":
             return 0
-        if isinstance(data, (int, float)):
-            self.counter+=1
-            return data
 
-        if isinstance(data, str):
-            try:
-                numeric_value = float(data) if "." in data else int(data)
-                self.counter += 1
-                return numeric_value
-            except ValueError:
-                raise ValueError(f"Json structure has non-numeric value on path")
+        if isinstance(data, (int, float)):
+            self.counter += 1
+            return data
 
         if isinstance(data, dict):
             name, column = self._extract_name_and_column(column)
-            if name in data:
-                return self._calculate_avg(data[name], column)
-            else:
+            try:
+                return self._calculate_avg(self._get_value(data, name), column)
+            except KeyError:
                 raise KeyError(f"Key '{name}' not found in JSON object")
 
         if isinstance(data, list):
             return self._process_list(data, column, self._calculate_avg)
+
         return 0

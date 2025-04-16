@@ -77,8 +77,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_null_count_column_Json_case1(self):
-        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_19null_2unique_13nullcol.json
-        name = "cs_weapons_12duplicate_19null_2unique_13nullcol.json"
+        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_2null_2unique_13nullcol.json
+        name = "cs_weapons_12duplicate_2null_2unique_13nullcol.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$something that... does not make sense"
 
@@ -98,8 +98,8 @@ class TestClass(TestCase):
 
 
     def test_null_count_column_Json_case2(self):
-        # Path to Test_files -> Json_cases -> gas_supply_24empty_9nullcol_4defined.json
-        name = "gas_supply_24empty_9nullcol_4defined.json"
+        # Path to Test_files -> Json_cases -> gas_supply_22empty_9nullcol_4defined.json
+        name = "gas_supply_22empty_9nullcol_4defined.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].Moffat"
 
@@ -118,8 +118,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_null_count_column_Json_case3(self):
-        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_19null_2unique_13nullcol.json
-        name = "cs_weapons_12duplicate_19null_2unique_13nullcol.json"
+        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_2null_2unique_13nullcol.json
+        name = "cs_weapons_12duplicate_2null_2unique_13nullcol.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].grenades[0].name"
 

@@ -117,8 +117,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_unique_count_column_Json_case3(self):
-        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_19null_2unique_13nullcol
-        name = "cs_weapons_12duplicate_19null_2unique_13nullcol.json"
+        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_2null_2unique_13nullcol.json
+        name = "cs_weapons_12duplicate_2null_2unique_13nullcol.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].grenades[1].name"
 

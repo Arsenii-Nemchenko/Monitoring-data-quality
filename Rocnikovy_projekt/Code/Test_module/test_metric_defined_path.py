@@ -8,8 +8,8 @@ from src.metric import DefinedPathCount
 class TestClass(TestCase):
 
     def test_defined_count_Json_case1(self):
-        # Path to Test_files -> Json_cases -> Gurteen_weather_4empty_5defined_90avg.json
-        name = "Gurteen_weather_4empty_5defined_90avg.json"
+        # Path to Test_files -> Json_cases -> Gurteen_weather_4empty_3defined_90avg.json
+        name = "Gurteen_weather_4empty_3defined_90avg.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].temperature"
 
@@ -28,10 +28,10 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_defined_count_Json_case2(self):
-        # Path to Test_files -> Json_cases -> gas_supply_24empty_9nullcol_4defined.json
-        name = "gas_supply_24empty_9nullcol_4defined.json"
+        # Path to Test_files -> Json_cases -> gas_supply_22empty_9nullcol_4defined.json
+        name = "gas_supply_22empty_9nullcol_4defined.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
-        path = "$[*].Corrib production"
+        path = "$[*][\"Corrib production\"]"
 
         try:
             with open(file_path, 'r') as file:

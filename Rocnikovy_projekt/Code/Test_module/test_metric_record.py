@@ -8,8 +8,8 @@ from src.metric import RecordCount
 
 class TestClass(TestCase):
     def test_record_count_CSV_case1(self):
-        # Path to Test_files -> CSV_cases -> cars_37rows_3empty_4duplicate.csv
-        name = "cars_37rows_3empty_4duplicate.csv"
+        # Path to Test_files -> CSV_cases -> cars_37rows_3empty_5duplicate.csv
+        name = "cars_37rows_3empty_5duplicate.csv"
         file_path = os.path.join("..", "Test_files", "CSV_cases", name)
 
         try:

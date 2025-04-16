@@ -8,8 +8,8 @@ from  src.metric import AverageValue, AverageValueJson
 
 class TestClass(TestCase):
     def test_average_value_column_CSV_case1(self):
-        # Path to Test_files -> CSV_cases -> business_operations_survey_23044745avg.csv
-        name = "business_operations_survey_23044745avg.csv"
+        # Path to Test_files -> CSV_cases -> business_operations_survey_23044746avg.csv
+        name = "business_operations_survey_23044746avg.csv"
         file_path = os.path.join("..", "Test_files", "CSV_cases", name)
         column = "value"
 
@@ -17,7 +17,7 @@ class TestClass(TestCase):
             result = AverageValue().calculate(data=pd.read_csv(file_path, index_col=False), column=column)
 
             self.assertEqual(result.metric_name, "AverageValue")
-            self.assertEqual(result.value, 23044745)
+            self.assertEqual(result.value, 23044746)
             print(f"OK {name.ljust(60)} column: {column}")
         except AssertionError:
             print(f"Fail {name.ljust(60)} column: {column}")
@@ -25,8 +25,8 @@ class TestClass(TestCase):
 
 
     def test_average_value_column_CSV_case2(self):
-        # Path to Test_files -> CSV_cases -> food_price_september_963avg.csv
-        name = "food_price_september_963avg.csv"
+        # Path to Test_files -> CSV_cases -> food_price_september_964avg.csv
+        name = "food_price_september_964avg.csv"
         file_path = os.path.join("..", "Test_files", "CSV_cases", name)
         column = "Data_value"
 
@@ -34,7 +34,7 @@ class TestClass(TestCase):
             result = AverageValue().calculate(data=pd.read_csv(file_path, index_col=False), column=column)
 
             self.assertEqual(result.metric_name, "AverageValue")
-            self.assertEqual(result.value, 963)
+            self.assertEqual(result.value, 964)
             print(f"OK {name.ljust(60)} column: {column}")
         except AssertionError:
             print(f"Fail {name.ljust(60)} column: {column}")
@@ -71,10 +71,10 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_average_value_column_Json_case1(self):
-        # Path to Test_files -> Json_cases -> company_5avg.json
-        name = "company_5avg.json"
+        # Path to Test_files -> Json_cases -> company_8avg.json
+        name = "company_8avg.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
-        path = "$[*].company.departments[*].employees[*].performance.2024.projects_completed"
+        path = "$[*].company.departments[*].employees[*].performance[\"2024\"].projects_completed"
         try:
             with open(file_path, 'r') as file:
                 loaded_data = json.load(file)
@@ -82,15 +82,15 @@ class TestClass(TestCase):
             result = AverageValueJson().calculate(data=loaded_data, column=path)
 
             self.assertEqual(result.metric_name, "AverageValue")
-            self.assertEqual(result.value, 7)
+            self.assertEqual(result.value, 8)
             print(f"OK {name.ljust(60)} path: {path}")
         except AssertionError:
             print(f"Fail {name.ljust(60)} path: {path}")
             raise AssertionError
 
     def test_average_value_column_Json_case2(self):
-        # Path to Test_files -> Json_cases -> Gurteen_weather_4empty_5defined_90avg.json
-        name = "Gurteen_weather_4empty_5defined_90avg.json"
+        # Path to Test_files -> Json_cases -> Gurteen_weather_4empty_3defined_90avg.json
+        name = "Gurteen_weather_4empty_3defined_90avg.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].humidity"
 
