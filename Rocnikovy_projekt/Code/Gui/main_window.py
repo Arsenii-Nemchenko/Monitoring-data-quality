@@ -1,4 +1,6 @@
-
+import os
+import pandas as pd
+import pyarrow.parquet as pq
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -200,9 +202,12 @@ class MainWindow(QMainWindow):
                                     UniqueValuesCountJson(), UniqueValuesCount(), AverageValue(), AverageValueJson()]
 
         self.database_manager = DBManager(self.regular_metrics + self.column_metrics)
+        self.current_monitoring = None
+        self.current_columns = []
         self.working_directories = []
         self.monitored_file_window = MonitoredFileWindow(self.database_manager)
         self.monitored_files = {}
+        self.monitored_file_windows = []
         #Pivot layout
         layout = QHBoxLayout()
 
@@ -241,7 +246,7 @@ class MainWindow(QMainWindow):
         #Current directory files
         layout_directory_files = QHBoxLayout()
         self.file_list = QListWidget()
-
+        self.file_list.itemClicked.connect(self.reload_current_directory)
         layout_directory_files.addWidget(self.file_list)
 
 
@@ -388,24 +393,20 @@ class MainWindow(QMainWindow):
         else:
             last_selected = self.select_metrics.last_selected
             self.last_selected_metric.setText(f"Last selected: {last_selected if last_selected else 'None'}")
-    #TODO
+
     def validate_jsonpath(self):
-        jsonpath = self.line_edit.text()
-        try:
-            parse(jsonpath)
-            return True
-        except JsonPathParserError:
-            return False
+        pattern = r'^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$'
+        return bool(re.fullmatch(pattern, self.line_edit.text()))
 
     #Working with directory
     def _get_working_directory(self):
         try:
             self.monitored_file_window = MonitoredFileWindow(self.database_manager)
+
             result = self.monitored_file_window.exec_()
 
             if result == QDialog.Accepted:
                 data_description = self.monitored_file_window.description_text.toPlainText()
-                metrics_selected = self.monitored_file_window.metric_type_selector.selected_options
                 metric_types_selected = self.monitored_file_window.metric_type_selector.selected_options
                 time_interval = self.monitored_file_window.time_interval_input_right.value()
                 selected_column_metrics = self.monitored_file_window.selected_column
@@ -414,6 +415,10 @@ class MainWindow(QMainWindow):
                 name = self.monitored_file_window.name_text.text()
                 file_format = self.monitored_file_window.file_type_selector.currentText().lower()
 
+                state = {"description": data_description, "metric_types": metric_types_selected,
+                         "time": time_interval, "column_metrics": selected_column_metrics,
+                         "regular_metrics": selected_regular_metrics, "directory": new_directory, "name": name, "file_format": file_format}
+                self.monitored_file_windows.append(state)
                 self.monitored_files[name] = DataMonitor(name, new_directory, data_description, selected_regular_metrics, selected_column_metrics, file_format,self.database_manager)
                 self.file_list.addItem(name)
 
@@ -438,6 +443,32 @@ class MainWindow(QMainWindow):
                 self.time_interval_input.setValue(time_interval)
         except OSError:
             pass
+
+    def load_columns_from_directory(self):
+        result = []
+        for filename in os.listdir(self.current_monitoring.folder):
+            file_path = os.path.join(self.current_monitoring.folder, filename)
+            try:
+                if self.current_monitoring.file_format == FileType.CSV and filename.endswith(".csv"):
+                    df = pd.read_csv(file_path, nrows=1)
+                    result = result + df.columns.tolist()
+                elif self.current_monitoring.file_format == FileType.PARQUET and filename.endswith(".parquet"):
+                    table = pq.read_table(file_path)
+                    result = result + table.schema.names
+            except Exception as e:
+                print(f"Error reading file {file_path}: {e}")
+        return result
+
+    def reload_current_directory(self, item):
+        self.current_monitoring = self.monitored_files.get(item.text())
+
+        self.current_columns = self.load_columns_from_directory()
+        self.column_button.clear()
+        self.column_button.addItems(self.current_columns)
+        #TODO
+        #Add interface refresh
+
+
 
 
 
