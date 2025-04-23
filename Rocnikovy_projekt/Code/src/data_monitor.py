@@ -1,5 +1,4 @@
 import os.path
-from time import sleep
 
 from .data_batch_file import DataBatchFile
 from .enums import FileType
@@ -9,20 +8,18 @@ from .enums import FileType
 #Column metrics have to be included in monitored_metrics
 class DataMonitor:
     def __init__(self, data_name: str, monitored_folder: str,
-                 data_description: str, monitored_metrics, monitored_column_metrics, file_format: str, db_manager):
+                 data_description: str, monitored_metrics, monitored_column_metrics, file_format: str, db_manager, column):
         self.folder = monitored_folder
         self.processed_files = set()
         self.data_name = data_name
         self.data_description = data_description
-        self.is_monitoring = False
         self.batch_files = []
         self.monitored_metrics = monitored_metrics
         self.monitored_column_metrics = monitored_column_metrics
-        self.monitor_interval = 3
         self.file_format = self._process_file_format(file_format)
         self.db_manager = db_manager
 
-        self.column = "$.price"
+        self.column = column
 
     def _process_file_format(self, file: str):
         if file == 'json':
@@ -55,11 +52,13 @@ class DataMonitor:
         else:
             return []
 
+
     def start_monitoring(self):
         input_files = self._new_files()
         for file in input_files:
-            print(f"I read {file}")
+            batch_file = DataBatchFile(file, self.monitored_metrics,
+                                       self.monitored_column_metrics,
+                                       self.column, self.file_format, self.db_manager)
 
-            batch_file = DataBatchFile(file, self.monitored_metrics, self.monitored_column_metrics, self.column, self.file_format, self.db_manager)
             batch_file.compute_monitored_metrics()
             self.batch_files.append(batch_file)
