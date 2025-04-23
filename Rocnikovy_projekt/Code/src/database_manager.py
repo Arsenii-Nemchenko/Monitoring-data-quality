@@ -186,7 +186,7 @@ class DBManager:
                                             """, (file_name, metric_type, file_format, time_stamp))
 
                     result = cursor.fetchall()
-                    return [row[0] for row in result]
+                    return [(row[0], time_stamp) for row in result]
 
         except ValueError as ve:
             print(f"Validation Error: {ve}")
