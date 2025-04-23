@@ -74,8 +74,8 @@ class TestClass(TestCase):
 
 
     def test_empty_record_count_Json_case1(self):
-        # Path to Test_files -> Json_cases -> gas_supply_22empty_9nullcol_4defined.json
-        name = "gas_supply_22empty_9nullcol_4defined.json"
+        # Path to Test_files -> Json_cases -> gas_supply_22empty_7nullcol_4defined.json
+        name = "gas_supply_22empty_7nullcol_4defined.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
 
         try:

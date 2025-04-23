@@ -25,8 +25,8 @@ class TestClass(TestCase):
             print(f"Fail {name.ljust(60)}")
 
     def test_duplicate_count_CSV_case2(self):
-        # Path to Test_files -> CSV_cases -> house_price_557rows_12duplicate.csv
-        name = "house_price_557rows_12duplicate.csv"
+        # Path to Test_files -> CSV_cases -> house_price_561rows_12duplicate_284unique.csv
+        name = "house_price_561rows_12duplicate_284unique.csv"
         file_path = os.path.join("..", "Test_files", "CSV_cases", name)
 
         try:
@@ -73,8 +73,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_duplicate_Json_case1(self):
-        # Path to Test_files -> JSON_cases -> cs_weapons_12duplicate_2null_2unique_13nullcol.json
-        name = "cs_weapons_12duplicate_2null_2unique_13nullcol.json"
+        # Path to Test_files -> JSON_cases -> cs_weapons_12duplicate_2null_2unique_1nullcol.json
+        name = "cs_weapons_12duplicate_2null_2unique_1nullcol.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
 
         try:

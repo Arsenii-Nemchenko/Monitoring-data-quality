@@ -36,21 +36,16 @@ class RecordCount(Metric):
         self.file_types = [FileType.CSV, FileType.PARQUET]
 
     def calculate(self, data : DataFrame):
-        empty = 0
-        for index, row in data.iterrows():
+        return MetricValue(self.name ,data.shape[0], datetime.now())
 
-            if all(self.is_na_or_empty(element) for element in row):
-                empty += 1
-        return MetricValue(self.name ,data.shape[0]-empty, datetime.now())
-    def is_na_or_empty(self, element):
-        if isinstance(element, str):
-            return element == ""
-        elif isinstance(element, list):
-            return all(self.is_na_or_empty(item) for item in element)
-        elif isinstance(element, dict):
-            return all(self.is_na_or_empty(val) for val in element.values())
-        else:
-            return pd.isna(element)
+class RecordCountJson(Metric):
+    def __init__(self):
+        super().__init__("RecordCount")
+        self.file_types = [FileType.JSON]
+    def calculate(self, data: Any) -> MetricValue:
+        if not isinstance(data, list):
+            raise ValueError("Wrong json file syntax. Did not get list!")
+        return MetricValue(self.name, len(data), datetime.now())
 
 class EmptyRecordCount(Metric):
     def __init__(self):
@@ -276,8 +271,12 @@ class NullValuesCountJson(ColumnMetricJson):
         return MetricValue(self.name, self._count_nulls(data, column), datetime.now())
 
     def _count_nulls(self, data, column):
-        if self._is_empty(data):
+        if data is None and column == "":
             return 1
+        if data == "":
+            return 1
+        if isinstance(data, (list, dict)) and len(data) == 0:
+            return 0
         if column == "":
             return 0
 
@@ -334,7 +333,7 @@ class UniqueValuesCount(ColumnMetric):
     def _is_unique(self, unique_values: set, value):
         if pd.isna(value) or value == '':
             return False
-        if unique_values.__contains__(value):
+        if value in unique_values:
             return False
         unique_values.add(value)
         return True
@@ -344,7 +343,10 @@ class UniqueValuesCount(ColumnMetric):
             raise ValueError("Column was not chosen!")
 
         unique_values = set()
-        return MetricValue(self.name, sum(1 if self._is_unique(unique_values, value) else 0 for value in data.loc[:,column]), datetime.now())
+        values = data[column].dropna().astype(str).str.strip()
+
+        unique_count = sum(1 for value in values if self._is_unique(unique_values, value))
+        return MetricValue(self.name, unique_count, datetime.now())
 
 class UniqueValuesCountJson(ColumnMetricJson):
     def __init__(self):

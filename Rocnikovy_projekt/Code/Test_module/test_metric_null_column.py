@@ -43,8 +43,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_null_count_column_Parquet_case1(self):
-        # Path to Test_files -> Parquet_cases -> car_owners_44rows_15colnull.parquet
-        name = "car_owners_44rows_15colnull.parquet"
+        # Path to Test_files -> Parquet_cases -> car_owners_47rows_15colnull.parquet
+        name = "car_owners_47rows_15colnull.parquet"
         file_path = os.path.join("..", "Test_files", "Parquet_cases", name)
         column = "contact"
 
@@ -98,8 +98,8 @@ class TestClass(TestCase):
 
 
     def test_null_count_column_Json_case2(self):
-        # Path to Test_files -> Json_cases -> gas_supply_22empty_9nullcol_4defined.json
-        name = "gas_supply_22empty_9nullcol_4defined.json"
+        # Path to Test_files -> Json_cases -> gas_supply_22empty_7nullcol_4defined.json
+        name = "gas_supply_22empty_7nullcol_4defined.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].Moffat"
 
@@ -110,7 +110,7 @@ class TestClass(TestCase):
             result = NullValuesCountJson().calculate(data=loaded_data, column=path)
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
-            self.assertEqual(result.value, 31)
+            self.assertEqual(result.value, 7)
             print(f"Ok {name.ljust(60)} path: {path}")
 
         except AssertionError:
@@ -118,8 +118,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_null_count_column_Json_case3(self):
-        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_2null_2unique_13nullcol.json
-        name = "cs_weapons_12duplicate_2null_2unique_13nullcol.json"
+        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_2null_2unique_1nullcol.json
+        name = "cs_weapons_12duplicate_2null_2unique_1nullcol.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].grenades[0].name"
 
@@ -130,7 +130,7 @@ class TestClass(TestCase):
             result = NullValuesCountJson().calculate(data=loaded_data, column=path)
 
             self.assertEqual(result.metric_name, "NullValuesCountColumn")
-            self.assertEqual(result.value, 13)
+            self.assertEqual(result.value, 1)
             print(f"Ok {name.ljust(60)} path: {path}")
 
         except AssertionError:

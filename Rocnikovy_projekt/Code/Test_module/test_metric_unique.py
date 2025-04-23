@@ -26,8 +26,8 @@ class TestClass(TestCase):
 
 
     def test_unique_count_column_CSV_case2(self):
-        # Path to Test_files -> CSV_cases -> house_price_557rows_12duplicate.csv
-        name = "house_price_557rows_12duplicate.csv"
+        # Path to Test_files -> CSV_cases -> house_price_561rows_12duplicate_284unique.csv
+        name = "house_price_561rows_12duplicate_284unique.csv"
         file_path = os.path.join("..", "Test_files", "CSV_cases", name)
         column = "area"
 
@@ -97,8 +97,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_unique_count_column_Json_case2(self):
-        # Path to Test_files -> Json_cases -> catering_27records_4empty_26unique.json
-        name = "catering_27records_4empty_26unique.json"
+        # Path to Test_files -> Json_cases -> catering_31records_4empty_26unique.json
+        name = "catering_31records_4empty_26unique.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].name"
 
@@ -117,8 +117,8 @@ class TestClass(TestCase):
             raise AssertionError
 
     def test_unique_count_column_Json_case3(self):
-        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_2null_2unique_13nullcol.json
-        name = "cs_weapons_12duplicate_2null_2unique_13nullcol.json"
+        # Path to Test_files -> Json_cases -> cs_weapons_12duplicate_2null_2unique_1nullcol.json
+        name = "cs_weapons_12duplicate_2null_2unique_1nullcol.json"
         file_path = os.path.join("..", "Test_files", "Json_cases", name)
         path = "$[*].grenades[1].name"
 
