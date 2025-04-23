@@ -1,190 +1,16 @@
 import os
 import pandas as pd
 import pyarrow.parquet as pq
-from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from jsonpath_ng import parse
-from jsonpath_ng.exceptions import JsonPathParserError
 import sys
 
+from Gui.monitored_window import MonitoredFileWindow
+from Gui.multi_selected_combobox import MultiSelectComboBox
 from src.database_manager import DBManager
 from src.data_monitor import DataMonitor
 from src.metric import *
-
-class MonitoredFileWindow(QDialog):
-    def __init__(self, db_manager: DBManager):
-        super().__init__()
-        self.db_manager = db_manager
-        self.new_directory = None
-        self.selected_column = []
-        self.selected_regular = []
-        self.column = db_manager.get_column_metrics()
-        self.regular = db_manager.get_regular_metrics()
-        self.setWindowTitle("New monitored file setup")
-        self.resize(700, 300)
-
-        main_layout = QVBoxLayout()
-        base_layout = QHBoxLayout()
-        left_layout = QGridLayout()
-        right_layout = QGridLayout()
-
-        #Left layout
-        self.name_label = QLabel("Name:")
-        self.type_label = QLabel("File format:")
-
-        self.name_text = QLineEdit()
-        self.folder_button = QPushButton("Set folder")
-        self.file_type_selector = QComboBox()
-        self.add_button = QPushButton("Add")
-
-        file_types = db_manager.get_file_types()
-        for file_type in file_types:
-            self.file_type_selector.addItem(file_type)
-
-        self.folder_button.clicked.connect(self.get_working_directory)
-        self.add_button.clicked.connect(self._handle_add_click)
-
-        self.name_text.setPlaceholderText("Enter name")
-
-        left_layout.addWidget(self.name_label, 0, 0)
-        left_layout.addWidget(self.folder_button, 1, 0)
-        left_layout.addWidget(self.type_label, 2, 0)
-        left_layout.addWidget(self.add_button, 3, 0)
-
-        left_layout.addWidget(self.name_text, 0, 1)
-        left_layout.addWidget(self.file_type_selector, 2, 1)
-
-        #Right layout
-        self.metric_type_label = QLabel("Metric type:")
-        self.time_interval_label = QLabel("Time interval (seconds):")
-        self.select_metrics_label = QLabel("Select Metrics: ")
-
-        # Metric type
-        self.metric_type_selector = MultiSelectComboBox(["Regular", "Column"])
-        right_layout.addWidget(self.metric_type_label, 0, 0)
-        right_layout.addWidget(self.metric_type_selector, 0, 1)
-
-        # Time interval
-        self.time_interval_input_right = QSpinBox()
-        self.time_interval_input_right.setMinimum(1)
-        self.time_interval_input_right.setMaximum(3600)
-        self.time_interval_input_right.setValue(10)
-        right_layout.addWidget(self.time_interval_label, 1, 0)
-        right_layout.addWidget(self.time_interval_input_right, 1, 1)
-
-        # Select metrics
-        self.select_metrics = MultiSelectComboBox([])
-        self.select_metrics.on_selection_change = self._handle_selected_metrics
-        right_layout.addWidget(self.select_metrics_label, 2, 0)
-        right_layout.addWidget(self.select_metrics, 2, 1)
-
-        #Data description
-        layout = QHBoxLayout()
-        self.description_text = QTextEdit()
-        self.description_text.setPlaceholderText("Write a short description of the data here...")
-        layout.addWidget(self.description_text)
-
-        self.metric_type_selector.on_selection_change = self.update_select_metrics
-
-        base_layout.addLayout(left_layout, 40)
-        base_layout.addLayout(right_layout, 60)
-
-        main_layout.addLayout(base_layout, 60)
-        main_layout.addLayout(layout, 40)
-        self.setLayout(main_layout)
-
-    def get_working_directory(self):
-        self.new_directory = QFileDialog.getExistingDirectory()
-
-    def _handle_add_click(self):
-        self.accept()
-
-    def _handle_selected_metrics(self):
-        selected_metrics =self.select_metrics.selected_options
-
-        self.selected_column = []
-        self.selected_regular = []
-
-
-        for metric in selected_metrics:
-            if metric in self.column:
-                self.selected_column.append(metric)
-            elif metric in self.regular:
-                self.selected_regular.append(metric)
-
-
-    def update_select_metrics(self):
-        selected_types = self.metric_type_selector.selected_options
-
-        options = []
-        if "Regular" in selected_types and "Column" in selected_types:
-            metrics = self.db_manager.get_regular_metrics() + self.db_manager.get_column_metrics()
-            options = {m for m in metrics}
-        elif "Regular" in selected_types:
-            options = {m for m in self.db_manager.get_regular_metrics()}
-        elif "Column" in selected_types:
-            options = {m for m in self.db_manager.get_column_metrics()}
-
-        final_options = []
-        for option in options:
-            if option == "DefinedPathCount" and self.file_type_selector.currentText().lower() != 'json':
-                continue
-            final_options.append(option)
-        self.select_metrics.set_options(final_options)
-
-class MultiSelectComboBox(QComboBox):
-    def __init__(self, options, on_selection_change=None):
-        super().__init__()
-        self.setView(QListView())
-        self.model = QStandardItemModel()
-        self.setModel(self.model)
-
-        self.options = options
-        self.selected_options = set()
-        self.last_selected = ""
-        self.on_selection_change = on_selection_change
-
-        for option in self.options:
-            item = QStandardItem(option)
-            item.setCheckable(True)
-            item.setCheckState(Qt.CheckState.Unchecked)
-            self.model.appendRow(item)
-
-        self.activated.connect(self.handle_selection)
-        self.update_display()
-
-    def handle_selection(self, index):
-        item = self.model.item(index)
-        if item.checkState() == Qt.CheckState.Checked:
-            item.setCheckState(Qt.CheckState.Unchecked)
-            self.selected_options.discard(item.text())
-        else:
-            item.setCheckState(Qt.CheckState.Checked)
-            self.selected_options.add(item.text())
-            self.last_selected = item.text()
-
-        self.update_display()
-
-        if self.on_selection_change:
-            self.on_selection_change()
-
-    def update_display(self):
-        self.setCurrentText(", ".join(self.selected_options) if self.selected_options else "Select Options")
-
-    def set_options(self, new_options):
-        self.model.clear()
-        self.selected_options.clear()
-        self.options = new_options
-        self.last_selected = None
-
-        for option in new_options:
-            item = QStandardItem(option)
-            item.setCheckable(True)
-            item.setCheckState(Qt.CheckState.Unchecked)
-            self.model.appendRow(item)
-
-        self.update_display()
+from graph import GraphWidget
 
 
 
@@ -195,19 +21,20 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Monitoring data quality")
         self.resize(1500, 500)
 
-        self.regular_metrics =  [RecordCount(), EmptyRecordCount(), NullObjectCount(), EmptyObjectCount(),
+        regular_metrics =  [RecordCount(), RecordCountJson(), EmptyRecordCount(), NullObjectCount(), EmptyObjectCount(),
                              DuplicateRecordCount()]
 
-        self.column_metrics = [NullValuesCountColumn(), NullValuesCountJson(), DefinedPathCount(),
+        column_metrics = [NullValuesCountColumn(), NullValuesCountJson(), DefinedPathCount(),
                                     UniqueValuesCountJson(), UniqueValuesCount(), AverageValue(), AverageValueJson()]
 
-        self.database_manager = DBManager(self.regular_metrics + self.column_metrics)
+        self.database_manager = DBManager(regular_metrics + column_metrics)
         self.current_monitoring = None
+        self.current_window = None
         self.current_columns = []
         self.working_directories = []
         self.monitored_file_window = MonitoredFileWindow(self.database_manager)
         self.monitored_files = {}
-        self.monitored_file_windows = []
+        self.monitored_file_windows = {}
         #Pivot layout
         layout = QHBoxLayout()
 
@@ -295,7 +122,13 @@ class MainWindow(QMainWindow):
         layout2_1.addWidget(QLabel("Select Metrics:"))
         layout2_1.addWidget(self.select_metrics)
 
-        self.last_selected_metric = QLabel("Last selected: ")
+        #Calculate metric
+        self.calculate_button = QPushButton("Calculate")
+        self.calculate_button.clicked.connect(self.calculate)
+
+        layout2_1.addWidget(self.calculate_button)
+
+        self.shown_graph = GraphWidget()
 
         layout2_2 = QVBoxLayout()
         layout2_2.setContentsMargins(0, 0, 0, 0)
@@ -306,9 +139,10 @@ class MainWindow(QMainWindow):
         line_edit_metric.setPlaceholderText("Show")
         self.show_metric.setLineEdit(line_edit_metric)
 
-        self.show_metric.currentIndexChanged.connect(self.update_current_metric)
+        #TODO this connects behavior i wanted before, think about it
+        #self.show_metric.currentIndexChanged.connect(self.update_current_metric)
 
-        layout2_2.addWidget(self.last_selected_metric)
+        layout2_2.addWidget(self.shown_graph)
 
         #Shown metric layout
         layout_shown_metric = QHBoxLayout()
@@ -359,21 +193,27 @@ class MainWindow(QMainWindow):
     def update_select_metrics(self):
         selected_types = self.metric_type_selector.selected_options
 
-        new_options = []
-        if "Regular" in selected_types and "Column" in selected_types:
-            options ={item for item in self.database_manager.get_regular_metrics() + self.database_manager.get_column_metrics()}
-            new_options = options
-            self.select_metrics.addItems(options)
-        elif "Regular" in selected_types:
-            options ={item for item in self.database_manager.get_regular_metrics()}
-            new_options = options
-            self.select_metrics.addItems(options)
-        elif "Column" in selected_types:
-            options ={item for item in self.database_manager.get_column_metrics()}
-            new_options = options
-            self.select_metrics.addItems(options)
+        prev_selected = self.select_metrics.selected_options.copy()
 
-        self.select_metrics.set_options(list(new_options))
+        if "Regular" in selected_types and "Column" in selected_types:
+            options = {item for item in
+                       self.database_manager.get_regular_metrics() + self.database_manager.get_column_metrics()}
+        elif "Regular" in selected_types:
+            options = {item for item in self.database_manager.get_regular_metrics()}
+        elif "Column" in selected_types:
+            options = {item for item in self.database_manager.get_column_metrics()}
+        else:
+            options = set()
+
+        new_options = []
+        for option in options:
+            if not self.current_monitoring is None and option == "DefinedPathCount" and self.current_monitoring.file_format.value.lower() != 'json':
+                continue
+            new_options.append(option)
+
+        valid_selection = prev_selected & options
+
+        self.select_metrics.set_options(new_options, selected=valid_selection)
 
     def update_shown_metric(self):
         selected_metrics = self.select_metrics.selected_options
@@ -383,16 +223,16 @@ class MainWindow(QMainWindow):
             self.show_metric.addItems(selected_metrics)
         else:
             self.show_metric.addItem("Show")
-
-        self.update_current_metric()
-
-    def update_current_metric(self):
-        text = self.show_metric.currentText()
-        if text != "Show":
-            self.last_selected_metric.setText(f"Last selected: {text}")
-        else:
-            last_selected = self.select_metrics.last_selected
-            self.last_selected_metric.setText(f"Last selected: {last_selected if last_selected else 'None'}")
+    #TODO think about this part
+    #     self.update_current_metric()
+    #
+    # def update_current_metric(self):
+    #     text = self.show_metric.currentText()
+    #     if text != "Show":
+    #         self.last_selected_metric.setText(f"Last selected: {text}")
+    #     else:
+    #         last_selected = self.select_metrics.last_selected
+    #         self.last_selected_metric.setText(f"Last selected: {last_selected if last_selected else 'None'}")
 
     def validate_jsonpath(self):
         pattern = r'^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$'
@@ -418,29 +258,18 @@ class MainWindow(QMainWindow):
                 state = {"description": data_description, "metric_types": metric_types_selected,
                          "time": time_interval, "column_metrics": selected_column_metrics,
                          "regular_metrics": selected_regular_metrics, "directory": new_directory, "name": name, "file_format": file_format}
-                self.monitored_file_windows.append(state)
-                self.monitored_files[name] = DataMonitor(name, new_directory, data_description, selected_regular_metrics, selected_column_metrics, file_format,self.database_manager)
+                self.monitored_file_windows[name] = state
+                self.monitored_files[name] = DataMonitor(name, new_directory, data_description, selected_regular_metrics, selected_column_metrics,
+                                                         file_format,self.database_manager, self.column_button.currentText())
                 self.file_list.addItem(name)
 
                 self.working_directories.append(new_directory)
 
                 #Setting up the widgets according to the data
-                self.metric_type_selector.selected_options = set(metric_types_selected)
-                self.metric_type_selector.update_display()
-                self.update_select_metrics()
-
-                for i in range(0, len(self.metric_type_selector.options)):
-                    if self.metric_type_selector.options[i] in metric_types_selected:
-                        self.metric_type_selector.handle_selection(i)
-
-                selected_help = selected_column_metrics + selected_regular_metrics
-                self.select_metrics.selected_options = set(selected_help)
-                self.select_metrics.update_display()
-                for i in range(0, len(self.select_metrics.options)):
-                    if self.select_metrics.options[i] in selected_help:
-                        self.select_metrics.handle_selection(i)
-
-                self.time_interval_input.setValue(time_interval)
+                if self.current_window is None:
+                    self.current_monitoring = self.monitored_files.get(name)
+                    self.current_window = state
+                    self.load_interface(metric_types_selected, selected_column_metrics, selected_regular_metrics, time_interval)
         except OSError:
             pass
 
@@ -460,13 +289,86 @@ class MainWindow(QMainWindow):
         return result
 
     def reload_current_directory(self, item):
+        self.save_changes()
+        print(item.text())
         self.current_monitoring = self.monitored_files.get(item.text())
+        self.current_window = self.monitored_file_windows.get(item.text())
+
+        metric_types_selected = self.current_window.get("metric_types")
+        time_interval = self.current_window.get("time")
+        selected_column_metrics = self.current_window.get("column_metrics")
+        selected_regular_metrics = self.current_window.get("regular_metrics")
+
+        self.load_interface(metric_types_selected, selected_column_metrics, selected_regular_metrics, time_interval)
 
         self.current_columns = self.load_columns_from_directory()
         self.column_button.clear()
         self.column_button.addItems(self.current_columns)
-        #TODO
-        #Add interface refresh
+
+    def load_interface(self, metric_types_selected, selected_column_metrics, selected_regular_metrics, time_interval):
+        self.metric_type_selector.set_selected_options(metric_types_selected)
+        self.update_select_metrics()
+
+        selected_help = selected_column_metrics + selected_regular_metrics
+        self.select_metrics.set_selected_options(selected_help)
+
+
+        self.time_interval_input.setValue(time_interval)
+
+    def save_changes(self):
+        self.current_window["metric_types"] = set(self.metric_type_selector.selected_options)
+        self.current_window["time"] = self.time_interval_input.value()
+
+        selected_metrics = self.select_metrics.selected_options
+
+        selected_column = []
+        selected_regular = []
+        self.divide_metrics(selected_metrics, selected_column, selected_regular)
+        self.current_window["column_metrics"] = selected_column
+        self.current_window["regular_metrics"] = selected_regular
+
+    def divide_metrics(self, selected, selected_column, selected_regular):
+        column = self.database_manager.get_column_metrics()
+
+        for metric in selected:
+            if metric in column:
+                selected_column.append(metric)
+            else:
+                selected_regular.append(metric)
+
+    def plot_metric_graph(self):
+        metric_name = self.show_metric.currentText()
+
+        data = [batch_file.get_metric_value(metric_name) for batch_file in self.current_monitoring.batch_files]
+        if not data:
+            raise AttributeError(f"No data available for {metric_name} metric!")
+
+        timestamps, values = zip(*data)
+        self.graph_widget.plot(timestamps, values, title=f"{metric_name} over Time")
+
+    def calculate(self):
+        name = self.current_window.get("name")
+        directory = self.current_window.get("directory")
+        data_description = self.current_window.get("description")
+        regular_metrics = []
+        column_metrics = []
+        file_format = self.current_window.get("file_format")
+        self.divide_metrics(self.select_metrics.selected_options, column_metrics, regular_metrics)
+
+        processed_files = self.current_monitoring.processed_files
+        data_batch_files = self.current_monitoring.batch_files
+        self.current_monitoring = DataMonitor(name ,directory, data_description,
+                                              regular_metrics, column_metrics, file_format, self.database_manager, self.column_button.currentText())
+        self.current_monitoring.processed_files = processed_files
+        self.current_monitoring.batch_files = data_batch_files
+        #Probably not needed
+        self.monitored_files[name] = self.current_monitoring
+
+        self.current_monitoring.start_monitoring()
+        self.plot_metric_graph()
+
+
+
 
 
 
