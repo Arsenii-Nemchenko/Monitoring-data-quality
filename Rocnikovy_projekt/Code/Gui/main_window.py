@@ -5,6 +5,8 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
 
+from Gui.calculation_thread import CalculationThread
+from Gui.metric_factory import MetricFactory
 from Gui.monitored_window import MonitoredFileWindow
 from Gui.multi_selected_combobox import MultiSelectComboBox
 from src.database_manager import DBManager
@@ -18,6 +20,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.calc_thread = None
         self.setWindowTitle("Monitoring data quality")
         self.resize(1500, 500)
 
@@ -26,7 +29,7 @@ class MainWindow(QMainWindow):
 
         column_metrics = [NullValuesCountColumn(), NullValuesCountJson(), DefinedPathCount(),
                                     UniqueValuesCountJson(), UniqueValuesCount(), AverageValue(), AverageValueJson()]
-
+        self.metric_factory = MetricFactory()
         self.database_manager = DBManager(regular_metrics + column_metrics)
         self.current_monitoring = None
         self.current_window = None
@@ -155,8 +158,7 @@ class MainWindow(QMainWindow):
         self.line_edit.setPlaceholderText("Column")
         self.column_button.setLineEdit(self.line_edit)
 
-        #LATER WILL BE CHANGED, SO FAR VALIDATES ONLY JSON
-        #LOGIC WILL BE CHANGED
+
         self.line_edit.editingFinished.connect(self.validate_jsonpath)
 
         layout_shown_metric.addWidget(QLabel("Show Metrics:"))
@@ -238,7 +240,7 @@ class MainWindow(QMainWindow):
         pattern = r'^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$'
         return bool(re.fullmatch(pattern, self.line_edit.text()))
 
-    #Working with directory
+    #Getting directory and setting up the data
     def _get_working_directory(self):
         try:
             self.monitored_file_window = MonitoredFileWindow(self.database_manager)
@@ -312,8 +314,8 @@ class MainWindow(QMainWindow):
         selected_help = selected_column_metrics + selected_regular_metrics
         self.select_metrics.set_selected_options(selected_help)
 
-
         self.time_interval_input.setValue(time_interval)
+        self.update_shown_metric()
 
     def save_changes(self):
         self.current_window["metric_types"] = set(self.metric_type_selector.selected_options)
@@ -336,24 +338,17 @@ class MainWindow(QMainWindow):
             else:
                 selected_regular.append(metric)
 
-    def plot_metric_graph(self):
-        metric_name = self.show_metric.currentText()
-
-        data = [batch_file.get_metric_value(metric_name) for batch_file in self.current_monitoring.batch_files]
-        if not data:
-            raise AttributeError(f"No data available for {metric_name} metric!")
-
-        timestamps, values = zip(*data)
-        self.graph_widget.plot(timestamps, values, title=f"{metric_name} over Time")
-
     def calculate(self):
         name = self.current_window.get("name")
         directory = self.current_window.get("directory")
         data_description = self.current_window.get("description")
-        regular_metrics = []
-        column_metrics = []
+        regular_metrics_names = []
+        column_metrics_names = []
         file_format = self.current_window.get("file_format")
-        self.divide_metrics(self.select_metrics.selected_options, column_metrics, regular_metrics)
+        self.divide_metrics(self.select_metrics.selected_options, column_metrics_names, regular_metrics_names)
+
+        regular_metrics = [self.metric_factory.get(name, file_format) for name in regular_metrics_names]
+        column_metrics = [self.metric_factory.get(name, file_format) for name in column_metrics_names]
 
         processed_files = self.current_monitoring.processed_files
         data_batch_files = self.current_monitoring.batch_files
@@ -365,7 +360,18 @@ class MainWindow(QMainWindow):
         self.monitored_files[name] = self.current_monitoring
 
         self.current_monitoring.start_monitoring()
-        self.plot_metric_graph()
+
+        metric_name = self.show_metric.currentText()
+
+        self.calc_thread = CalculationThread(
+            graph_widget=self.shown_graph,
+            monitoring=self.current_monitoring,
+            metric_name=metric_name,
+            interval_sec=self.time_interval_input.value()
+        )
+        self.calc_thread.start()
+
+
 
 
 
