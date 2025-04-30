@@ -6,7 +6,6 @@ import json
 import re
 
 from .database_manager import DBManager
-from .metric import Metric
 from .enums import FileType
 
 
@@ -43,7 +42,7 @@ class DataBatchFile:
             case 'JSON':
                 with open(self.path, 'r') as file:
                     data = json.load(file)
-                    if metric_name == "DuplicateCount" or metric_name == "RecordCount":
+                    if metric_name == "DuplicateCount":
                         data = pd.json_normalize(data)
 
                 return data
@@ -54,23 +53,21 @@ class DataBatchFile:
             case _:
                 raise ValueError("Unsupported file type!")
 
-#So far this is the solution to unchangeable monitored metrics.
-# It will be fixed after GUI implementation of changing of monitored metrics
     def compute_monitored_metrics(self):
         for metric in self.monitored_metrics:
-            if not metric.accept(self.file_type):
+            if not metric.accept(self.file_type) or self.get_metric_value(metric.name):
                 continue
             else:
                 result = metric.calculate(self._get_parsed_data(metric.name))
                 self.db_manager.save(self.name, self.file_type.value, result.metric_name, str(self.time_stamp), result.value)
 
         for metric in self.monitored_column_metrics:
-            if not metric.accept(self.file_type):
+            if not metric.accept(self.file_type) or self.get_metric_value(metric.name, self.column):
                 continue
             else:
                 result = metric.calculate(self._get_parsed_data(metric.name), column=self.column)
                 self.db_manager.save(self.name, self.file_type.value, result.metric_name, str(self.time_stamp), result.value)
 
 
-    def get_metric_value(self, metric_name):
-        return self.db_manager.get_value(self.name, metric_name, self.file_type, self.time_stamp, column=self.column)
+    def get_metric_value(self, metric_name, column=None):
+        return self.db_manager.get_value(self.name, metric_name, self.file_type.value, self.time_stamp, column=column)

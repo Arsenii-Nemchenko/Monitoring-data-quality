@@ -16,12 +16,13 @@ class DataMonitor:
         self.batch_files = []
         self.monitored_metrics = monitored_metrics
         self.monitored_column_metrics = monitored_column_metrics
-        self.file_format = self._process_file_format(file_format)
+        self.file_format = self.process_file_format(file_format)
         self.db_manager = db_manager
 
         self.column = column
 
-    def _process_file_format(self, file: str):
+    @staticmethod
+    def process_file_format(file: str):
         if file == 'json':
             return FileType.JSON
         elif file == 'csv':
@@ -41,7 +42,7 @@ class DataMonitor:
                 if not self.processed_files.__contains__(file):
                     self.processed_files.add(file)
                     file_format_part = file.rfind('.')
-                    if not self._process_file_format(file[file_format_part + 1:]) == self.file_format:
+                    if not self.process_file_format(file[file_format_part + 1:]) == self.file_format:
                         continue
 
                     file = file[:file_format_part]
