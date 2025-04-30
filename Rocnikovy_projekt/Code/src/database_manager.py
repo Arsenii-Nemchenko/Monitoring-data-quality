@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from dotenv import load_dotenv
 
@@ -172,7 +173,7 @@ class DBManager:
                                             JOIN metrics m ON cm.metric_id = m.metric_id
                                             JOIN file_types ft ON f.f_type_id = ft.f_type_id
                                             WHERE f.f_name = %s AND m.metric_type = %s AND ft.f_type = %s 
-                                            AND cm.column = %s AND time = TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS');
+                                            AND cm.column_name = %s AND time = TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS');
                                             """, (file_name, metric_type, file_format, column, time_stamp))
                     else:
                         cursor.execute("""
@@ -182,11 +183,11 @@ class DBManager:
                                             JOIN metrics m ON cm.metric_id = m.metric_id
                                             JOIN file_types ft ON f.f_type_id = ft.f_type_id
                                             WHERE f.f_name = %s AND m.metric_type = %s AND ft.f_type = %s 
-                                            AND cm.column IS NULL AND time = TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS');
+                                            AND cm.column_name IS NULL AND time = TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS');
                                             """, (file_name, metric_type, file_format, time_stamp))
 
                     result = cursor.fetchall()
-                    return [(row[0], time_stamp) for row in result]
+                    return [(row[0], datetime.strptime(time_stamp, "%Y%m%d%H%M%S")) for row in result]
 
         except ValueError as ve:
             print(f"Validation Error: {ve}")
