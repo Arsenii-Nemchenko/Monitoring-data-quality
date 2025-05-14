@@ -103,52 +103,48 @@ class DBManager:
         except DatabaseError as e:
             print(f"Error inserting metric types: {e}")
 
-    def save(self, file_name, file_type, metric_type, timestamp, metric_value):
+    def save(self, file_name, file_type, metric_type, timestamp, metric_value, column=None):
         try:
             with self._connect() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("""
-                        SELECT f_type_id FROM file_types WHERE f_type = %s
-                    """, (file_type,))
-
+                           SELECT f_type_id FROM file_types WHERE f_type = %s
+                       """, (file_type,))
                     file_type_row = cursor.fetchone()
 
                     if file_type_row is None:
                         raise ValueError("Wrong file type!")
-                    else:
-                        f_type_id = file_type_row[0]
+                    f_type_id = file_type_row[0]
 
                     cursor.execute("""
-                                        SELECT file_id FROM files WHERE f_name = %s AND time = TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS') 
-                                        AND f_type_id = %s
-                                    """, (file_name, timestamp, f_type_id,))
-
+                           SELECT file_id FROM files 
+                           WHERE f_name = %s AND time = TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS') 
+                           AND f_type_id = %s
+                       """, (file_name, timestamp, f_type_id,))
                     file_row = cursor.fetchone()
 
                     if file_row is None:
                         cursor.execute("""
-                                            INSERT INTO files (f_name, f_type_id, time) VALUES (%s, %s, TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS')) RETURNING file_id;
-                                        """, (file_name, f_type_id, timestamp,))
+                               INSERT INTO files (f_name, f_type_id, time) 
+                               VALUES (%s, %s, TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS')) 
+                               RETURNING file_id;
+                           """, (file_name, f_type_id, timestamp,))
                         file_row = cursor.fetchone()
-
-
-
                     file_id = file_row[0]
 
                     cursor.execute("""
-                        SELECT metric_id FROM metrics WHERE metric_type = %s
-                    """, (metric_type,))
-
+                           SELECT metric_id FROM metrics WHERE metric_type = %s
+                       """, (metric_type,))
                     metric_row = cursor.fetchone()
+
                     if metric_row is None:
                         raise ValueError("Wrong metric type!")
-                    else:
-                        metric_id = metric_row[0]
+                    metric_id = metric_row[0]
 
                     cursor.execute("""
-                        INSERT INTO calculated_metrics (file_id, metric_id, value)
-                        VALUES (%s, %s, %s);
-                    """, (int(file_id), int(metric_id), int(metric_value)))
+                           INSERT INTO calculated_metrics (file_id, metric_id, value, column_name)
+                           VALUES (%s, %s, %s, %s);
+                       """, (int(file_id), int(metric_id), int(metric_value), column))
 
             conn.commit()
 
@@ -165,6 +161,7 @@ class DBManager:
         try:
             with self._connect() as conn:
                 with conn.cursor() as cursor:
+                    print(f"I get {metric_type} {column}")
                     if column:
                         cursor.execute("""
                                             SELECT cm.value
@@ -174,7 +171,7 @@ class DBManager:
                                             JOIN file_types ft ON f.f_type_id = ft.f_type_id
                                             WHERE f.f_name = %s AND m.metric_type = %s AND ft.f_type = %s 
                                             AND cm.column_name = %s AND time = TO_TIMESTAMP(%s, 'YYYYMMDDHH24MISS');
-                                            """, (file_name, metric_type, file_format, column, time_stamp))
+                                            """, (file_name, metric_type, file_format, column, time_stamp,))
                     else:
                         cursor.execute("""
                                             SELECT cm.value
