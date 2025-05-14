@@ -18,8 +18,29 @@ class CalculationThread(QThread):
         self._stop_event.set()
 
     def _run(self):
+        print("Calculation thread started")
+
+        # Wait until batch_files are available
+        with self.monitoring.condition:
+            while not self.monitoring.batch_files and not self._stop_event.is_set():
+                print("Waiting for batch files")
+                self.monitoring.condition.wait(timeout=2)
+
+        if self._stop_event.is_set():
+            return
+
+        self.perform_calculation()
+
         while not self._stop_event.is_set():
-            data = [batch_file.get_metric_value(self.metric_name) for batch_file in self.monitoring.batch_files]
+            self._stop_event.wait(self.interval_sec)
+            if self._stop_event.is_set():
+                break
+            self.perform_calculation()
+
+    def perform_calculation(self):
+        try:
+            with self.monitoring.lock:
+                data = [bf.get_metric_value(self.metric_name) for bf in self.monitoring.batch_files]
             if not data:
                 raise AttributeError(f"No data available for {self.metric_name} metric!")
 
@@ -27,8 +48,8 @@ class CalculationThread(QThread):
             if data:
                 values, timestamps = zip(*data)
                 self.plot_ready.emit(list(timestamps), list(values), f"{self.metric_name} over time")
-
-            self._stop_event.wait(self.interval_sec)
+        except Exception as e:
+            print(f"Calculation error for metric '{self.metric_name}': {e}")
 
     def run(self):
         try:
