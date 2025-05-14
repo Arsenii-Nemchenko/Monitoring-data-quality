@@ -55,19 +55,21 @@ class DataBatchFile:
 
     def compute_monitored_metrics(self):
         for metric in self.monitored_metrics:
-            if not metric.accept(self.file_type) or self.get_metric_value(metric.name):
+            if not metric.accept(self.file_type) or bool(self.get_metric_value(metric.name)):
                 continue
             else:
                 result = metric.calculate(self._get_parsed_data(metric.name))
                 self.db_manager.save(self.name, self.file_type.value, result.metric_name, str(self.time_stamp), result.value)
 
         for metric in self.monitored_column_metrics:
-            if not metric.accept(self.file_type) or self.get_metric_value(metric.name, self.column):
+            if not metric.accept(self.file_type) or bool(self.get_metric_value(metric.name)):
                 continue
             else:
                 result = metric.calculate(self._get_parsed_data(metric.name), column=self.column)
-                self.db_manager.save(self.name, self.file_type.value, result.metric_name, str(self.time_stamp), result.value)
+                self.db_manager.save(self.name, self.file_type.value, result.metric_name, str(self.time_stamp), result.value, column=self.column)
 
 
-    def get_metric_value(self, metric_name, column=None):
-        return self.db_manager.get_value(self.name, metric_name, self.file_type.value, self.time_stamp, column=column)
+    def get_metric_value(self, metric_name):
+        if any(metric_name==metric.name for metric in self.monitored_metrics):
+            return self.db_manager.get_value(self.name, metric_name, self.file_type.value, self.time_stamp)
+        return self.db_manager.get_value(self.name, metric_name, self.file_type.value, self.time_stamp, self.column)
