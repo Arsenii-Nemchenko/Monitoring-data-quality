@@ -75,7 +75,7 @@ class EmptyObjectCount(Metric):
         return MetricValue(self.name, self._count_empty(data), datetime.now())
 
     def _is_empty(self, value):
-        if value is None:
+        if pd.isna(value):
             return True
         if isinstance(value, str) and value.strip() == "":
             return True
@@ -238,13 +238,13 @@ class ColumnMetricJson(Metric):
         return bool(re.fullmatch(pattern, path))
 
     def _is_empty(self, value):
-        if value is None:
-            return True
         if isinstance(value, str) and value.strip() == "":
             return True
         if isinstance(value, (list, dict)) and len(value) == 0:
             return True
-        return False
+        if isinstance(value, (list, np.ndarray, pd.Series)):
+            return pd.isna(value).all()
+        return pd.isna(value)
 
 class NullValuesCountColumn(ColumnMetric):
     def __init__(self):
@@ -374,10 +374,12 @@ class UniqueValuesCountJson(ColumnMetricJson):
         return MetricValue(self.name, self._count_unique(data, column), datetime.now())
 
     def _count_unique(self, data, column):
-        if self._is_empty(data):
+        if isinstance(data, (list, dict)) and len(data) == 0:
+            return 0
+        if data is None:
             return 0
 
-        if column == "" and self._is_unique( data):
+        if column == "" and self._is_unique(data):
             return 1
 
         if isinstance(data, dict):
@@ -447,7 +449,7 @@ class AverageValueJson(ColumnMetricJson):
         return MetricValue(self.name, int(round(result / self.counter)), datetime.now())
 
     def _calculate_avg(self, data, column):
-        if data is None or data == "":
+        if pd.isna(data) or data == "":
             return 0
 
         if isinstance(data, (int, float)):
