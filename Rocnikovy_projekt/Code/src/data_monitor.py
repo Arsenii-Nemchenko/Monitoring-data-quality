@@ -2,10 +2,10 @@ import os.path
 
 from .data_batch_file import DataBatchFile
 from .enums import FileType
-
+import threading
 
 # DataMonitor class
-#Column metrics have to be included in monitored_metrics
+# Column metrics have to be included in monitored_metrics
 class DataMonitor:
     def __init__(self, data_name: str, monitored_folder: str,
                  data_description: str, monitored_metrics, monitored_column_metrics, file_format: str, db_manager, column):
@@ -20,6 +20,8 @@ class DataMonitor:
         self.db_manager = db_manager
 
         self.column = column
+        self.lock = threading.Lock()
+        self.condition = threading.Condition(self.lock)
 
     @staticmethod
     def process_file_format(file: str):
@@ -53,13 +55,23 @@ class DataMonitor:
         else:
             return []
 
-
     def start_monitoring(self):
         input_files = self._new_files()
+        new_batch_files = []
+
         for file in input_files:
             batch_file = DataBatchFile(file, self.monitored_metrics,
                                        self.monitored_column_metrics,
                                        self.column, self.file_format, self.db_manager)
 
             batch_file.compute_monitored_metrics()
-            self.batch_files.append(batch_file)
+            new_batch_files.append(batch_file)
+
+        with self.condition:
+            print("Batch files before adding new")
+            print(self.batch_files)
+            self.batch_files.extend(new_batch_files)
+            print("Batch files after adding new")
+            print(self.batch_files)
+            if self.batch_files:
+                self.condition.notify_all()
