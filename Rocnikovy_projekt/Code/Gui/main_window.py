@@ -1,5 +1,6 @@
 import os
-import pandas as pd
+import threading
+
 import pyarrow.parquet as pq
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -8,11 +9,12 @@ import sys
 from Gui.calculation_thread import CalculationThread
 from Gui.metric_factory import MetricFactory
 from Gui.monitored_window import MonitoredFileWindow
+from Gui.monitoring_thread import MonitoringThread
 from Gui.multi_selected_combobox import MultiSelectComboBox
 from src.database_manager import DBManager
 from src.data_monitor import DataMonitor
 from src.metric import *
-from graph import GraphWidget
+from Gui.graph import GraphWidget
 
 
 
@@ -21,6 +23,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.calc_thread = None
+        self.monitor_thread = None
         self.setWindowTitle("Monitoring data quality")
         self.resize(1500, 500)
 
@@ -119,7 +122,7 @@ class MainWindow(QMainWindow):
 
 
         #Metric selection
-        self.select_metrics = MultiSelectComboBox([], self.update_shown_metric)
+        self.select_metrics = MultiSelectComboBox([])
         self.select_metrics.setMinimumSize(150, 30)
 
         layout2_1.addWidget(QLabel("Select Metrics:"))
@@ -142,8 +145,7 @@ class MainWindow(QMainWindow):
         line_edit_metric.setPlaceholderText("Show")
         self.show_metric.setLineEdit(line_edit_metric)
 
-        #TODO this connects behavior i wanted before, think about it
-        #self.show_metric.currentIndexChanged.connect(self.update_current_metric)
+        self.show_metric.currentIndexChanged.connect(self.update_current_metric)
 
         layout2_2.addWidget(self.shown_graph)
 
@@ -154,12 +156,14 @@ class MainWindow(QMainWindow):
 
 
         self.column_button = QComboBox()
+        self.last_column = None
         self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText("Column")
         self.column_button.setLineEdit(self.line_edit)
 
 
         self.line_edit.editingFinished.connect(self.validate_jsonpath)
+        self.line_edit.editingFinished.connect(self.save_column)
 
         layout_shown_metric.addWidget(QLabel("Show Metrics:"))
         layout_shown_metric.addWidget(self.show_metric)
@@ -225,20 +229,26 @@ class MainWindow(QMainWindow):
             self.show_metric.addItems(selected_metrics)
         else:
             self.show_metric.addItem("Show")
-    #TODO think about this part
-    #     self.update_current_metric()
-    #
-    # def update_current_metric(self):
-    #     text = self.show_metric.currentText()
-    #     if text != "Show":
-    #         self.last_selected_metric.setText(f"Last selected: {text}")
-    #     else:
-    #         last_selected = self.select_metrics.last_selected
-    #         self.last_selected_metric.setText(f"Last selected: {last_selected if last_selected else 'None'}")
+
+    def update_current_metric(self):
+        text = self.show_metric.currentText()
+        if text != "Show" and self.calc_thread:
+            if text in self.database_manager.get_column_metrics():
+                if not self.column_button.currentText()==self.last_column:
+                    self.calculate()
+                else:
+                    self.update_thread()
+            else:
+                self.update_thread()
 
     def validate_jsonpath(self):
-        pattern = r'^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$'
-        return bool(re.fullmatch(pattern, self.line_edit.text()))
+        if self.current_monitoring and self.current_monitoring.file_format == FileType.JSON:
+            pattern = r'^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$'
+            return bool(re.fullmatch(pattern, self.line_edit.text()))
+        return True
+
+    def save_column(self):
+        self.last_column = self.line_edit.text()
 
     #Getting directory and setting up the data
     def _get_working_directory(self):
@@ -339,6 +349,16 @@ class MainWindow(QMainWindow):
                 selected_regular.append(metric)
 
     def calculate(self):
+        if self.calc_thread and hasattr(self, 'calc_thread') and self.calc_thread.isRunning():
+            self.calc_thread.stop()
+            self.calc_thread.wait()
+
+        if self.monitor_thread and hasattr(self, 'monitor_thread') and self.monitor_thread.isRunning():
+            self.monitor_thread.stop()
+            self.monitor_thread.wait()
+
+        self.update_shown_metric()
+
         name = self.current_window.get("name")
         directory = self.current_window.get("directory")
         data_description = self.current_window.get("description")
@@ -353,23 +373,41 @@ class MainWindow(QMainWindow):
         processed_files = self.current_monitoring.processed_files
         data_batch_files = self.current_monitoring.batch_files
         self.current_monitoring = DataMonitor(name ,directory, data_description,
-                                              regular_metrics, column_metrics, file_format, self.database_manager, self.column_button.currentText())
+                                                  regular_metrics, column_metrics, file_format, self.database_manager, self.column_button.currentText())
         self.current_monitoring.processed_files = processed_files
         self.current_monitoring.batch_files = data_batch_files
         #Probably not needed
         self.monitored_files[name] = self.current_monitoring
 
-        self.current_monitoring.start_monitoring()
+        self.start_threads()
 
-        metric_name = self.show_metric.currentText()
+    def start_threads(self):
+        self.monitor_thread = MonitoringThread(
+            monitoring=self.current_monitoring,
+            interval=self.time_interval_input.value()
+        )
+        self.monitor_thread.start()
 
         self.calc_thread = CalculationThread(
             graph_widget=self.shown_graph,
             monitoring=self.current_monitoring,
-            metric_name=metric_name,
-            interval_sec=self.time_interval_input.value()
+            metric_name=self.show_metric.currentText(),
+            interval_sec=self.time_interval_input.value(),
         )
         self.calc_thread.start()
+
+    def update_thread(self):
+        if self.calc_thread and hasattr(self, 'calc_thread') and self.calc_thread.isRunning():
+            self.calc_thread.stop()
+            self.calc_thread.wait()
+
+            self.calc_thread = CalculationThread(
+                graph_widget=self.shown_graph,
+                monitoring=self.current_monitoring,
+                metric_name=self.show_metric.currentText(),
+                interval_sec=self.time_interval_input.value()
+            )
+            self.calc_thread.start()
 
 
 
