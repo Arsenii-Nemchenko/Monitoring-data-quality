@@ -9,8 +9,8 @@ import json
 from pandas import DataFrame
 from datetime import datetime
 
-from src.enums import FileType
-from src.metric_value import MetricValue
+from .enums import FileType
+from .metric_value import MetricValue
 
 
 # abstract Metric class
