@@ -6,15 +6,15 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
 
-from Gui.calculation_thread import CalculationThread
-from Gui.metric_factory import MetricFactory
-from Gui.monitored_window import MonitoredFileWindow
-from Gui.monitoring_thread import MonitoringThread
-from Gui.multi_selected_combobox import MultiSelectComboBox
-from src.database_manager import DBManager
-from src.data_monitor import DataMonitor
-from src.metric import *
-from Gui.graph import GraphWidget
+from .calculation_thread import CalculationThread
+from .metric_factory import MetricFactory
+from .monitored_window import MonitoredFileWindow
+from .monitoring_thread import MonitoringThread
+from .multi_selected_combobox import MultiSelectComboBox
+from ..src.database_manager import DBManager
+from ..src.data_monitor import DataMonitor
+from ..src.metric import *
+from .graph import GraphWidget
 
 
 
@@ -302,7 +302,6 @@ class MainWindow(QMainWindow):
 
     def reload_current_directory(self, item):
         self.save_changes()
-        print(item.text())
         self.current_monitoring = self.monitored_files.get(item.text())
         self.current_window = self.monitored_file_windows.get(item.text())
 
@@ -393,6 +392,7 @@ class MainWindow(QMainWindow):
             monitoring=self.current_monitoring,
             metric_name=self.show_metric.currentText(),
             interval_sec=self.time_interval_input.value(),
+            column=self.last_column
         )
         self.calc_thread.start()
 
@@ -405,7 +405,8 @@ class MainWindow(QMainWindow):
                 graph_widget=self.shown_graph,
                 monitoring=self.current_monitoring,
                 metric_name=self.show_metric.currentText(),
-                interval_sec=self.time_interval_input.value()
+                interval_sec=self.time_interval_input.value(),
+                column=self.last_column
             )
             self.calc_thread.start()
 
