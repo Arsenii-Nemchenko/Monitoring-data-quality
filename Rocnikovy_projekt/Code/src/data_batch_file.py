@@ -10,14 +10,14 @@ from .enums import FileType
 
 
 class DataBatchFile:
-    def __init__(self, file, monitored_metrics, monitored_column_metrics, column, file_type:FileType, db_manager: DBManager):
-        self.monitored_metrics = monitored_metrics
-        self.monitored_column_metrics = monitored_column_metrics
+    def __init__(self, file, column, file_type:FileType, db_manager: DBManager):
         self.column = column
         self.file_type = file_type
         self.name, self.time_stamp, self.path = self._parse_filename(file)
         self.read = datetime.datetime.now()
         self.db_manager = db_manager
+        self.computed_metrics = set()
+        self.computed_column_metrics = set()
 
     def _parse_filename(self, input_string: str):
         timestamp_pattern = r"\d{14}"
@@ -53,15 +53,25 @@ class DataBatchFile:
             case _:
                 raise ValueError("Unsupported file type!")
 
-    def compute_monitored_metrics(self):
-        for metric in self.monitored_metrics:
+    def compute_monitored_metrics(self, all_metrics, all_column_metrics):
+        new_metrics = set(all_metrics) - self.computed_metrics
+        new_col_metrics = set(all_column_metrics) - self.computed_column_metrics
+
+        if new_metrics or new_col_metrics:
+            self._compute(new_metrics, new_col_metrics)
+
+        self.computed_metrics.update(new_metrics)
+        self.computed_column_metrics.update(new_col_metrics)
+
+    def _compute(self, metrics_to_compute, column_metrics_to_compute):
+        for metric in metrics_to_compute:
             if not metric.accept(self.file_type) or bool(self.get_metric_value(metric.name)):
                 continue
             else:
                 result = metric.calculate(self._get_parsed_data(metric.name))
                 self.db_manager.save(self.name, self.file_type.value, result.metric_name, str(self.time_stamp), result.value)
 
-        for metric in self.monitored_column_metrics:
+        for metric in column_metrics_to_compute:
             if not metric.accept(self.file_type) or bool(self.get_metric_value(metric.name)):
                 continue
             else:
@@ -70,6 +80,8 @@ class DataBatchFile:
 
 
     def get_metric_value(self, metric_name):
-        if any(metric_name==metric.name for metric in self.monitored_metrics):
+        if any(metric_name==metric.name for metric in self.computed_metrics):
             return self.db_manager.get_value(self.name, metric_name, self.file_type.value, self.time_stamp)
-        return self.db_manager.get_value(self.name, metric_name, self.file_type.value, self.time_stamp, self.column)
+        if any(metric_name == metric.name for metric in self.computed_column_metrics):
+            return self.db_manager.get_value(self.name, metric_name, self.file_type.value, self.time_stamp, self.column)
+        return None
