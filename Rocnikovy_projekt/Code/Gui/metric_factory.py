@@ -1,5 +1,5 @@
-from src.data_monitor import DataMonitor
-from src.metric import *
+from ..src.data_monitor import DataMonitor
+from ..src.metric import *
 
 class MetricFactory:
     def __init__(self):
