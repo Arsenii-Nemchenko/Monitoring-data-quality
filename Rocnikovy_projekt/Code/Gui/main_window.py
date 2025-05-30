@@ -16,8 +16,6 @@ from ..src.data_monitor import DataMonitor
 from ..src.metric import *
 from .graph import GraphWidget
 
-
-
 class MainWindow(QMainWindow):
 
     def __init__(self):
@@ -49,7 +47,7 @@ class MainWindow(QMainWindow):
         layout_header = QHBoxLayout()
         layout_header.setSpacing(5)
         layout_header.setAlignment(Qt.AlignRight)
-        header_name = QLabel("Add monitored file")
+        header_name = QLabel("Add new monitored folder")
 
 
         self.remove_file_button = QPushButton("Remove")
@@ -72,9 +70,9 @@ class MainWindow(QMainWindow):
                    }
                """)
         plus_button.clicked.connect(self._get_working_directory)
-        layout_header.addWidget(self.remove_file_button, 50)
+        layout_header.addWidget(self.remove_file_button, 30)
         layout_header.addWidget(header_name, 30)
-        layout_header.addWidget(plus_button, 20)
+        layout_header.addWidget(plus_button, 40)
 
         #Current directory files
         layout_directory_files = QHBoxLayout()
@@ -88,10 +86,6 @@ class MainWindow(QMainWindow):
         #Adition to left pivot layout
         layout1.addLayout(layout_header)
         layout1.addLayout(layout_directory_files)
-
-
-
-
 
 
         layout2 = QVBoxLayout()
@@ -273,8 +267,8 @@ class MainWindow(QMainWindow):
                 self.monitored_file_windows[name] = state
                 self.monitored_files[name] = DataMonitor(name, new_directory, data_description, selected_regular_metrics, selected_column_metrics,
                                                          file_format,self.database_manager, self.column_button.currentText())
-                self.file_list.addItem(name)
 
+                self.add_monitored_item(name, file_format, new_directory)
                 self.working_directories.append(new_directory)
 
                 #Setting up the widgets according to the data
@@ -284,6 +278,28 @@ class MainWindow(QMainWindow):
                     self.load_interface(metric_types_selected, selected_column_metrics, selected_regular_metrics, time_interval)
         except OSError:
             pass
+
+    def add_monitored_item(self, name, file_format, directory):
+        widget = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(5, 2, 5, 2)
+        layout.setSpacing(10)
+
+        name_label = QLabel(name)
+        format_label = QLabel(file_format)
+        format_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        layout.addWidget(name_label)
+        layout.addStretch()
+        layout.addWidget(format_label)
+        widget.setLayout(layout)
+
+        list_item = QListWidgetItem()
+        list_item.setToolTip(directory)
+        list_item.setSizeHint(widget.sizeHint())
+
+        self.file_list.addItem(list_item)
+        self.file_list.setItemWidget(list_item, widget)
 
     def load_columns_from_directory(self):
         result = []
