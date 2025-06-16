@@ -202,6 +202,18 @@ class MainWindow(QMainWindow):
         row = self.file_list.row(selected_item)
         self.file_list.takeItem(row)
 
+        self.shown_graph.clear_graph()
+        self.column_button.clear()
+        self.current_columns = []
+        self.last_column = None
+        self.show_metric.clear()
+        self.select_metrics.clear()
+        self.metric_type_selector.set_selected_options([])
+        self.time_interval_input.setValue(10)
+
+        self.current_window = None
+        self.monitor_thread = None
+
         if not self.monitor_thread:
             self.shown_graph.clear_graph()
             self.column_button.clear()
@@ -454,6 +466,8 @@ class MainWindow(QMainWindow):
                 selected_regular.append(metric)
 
     def calculate(self):
+        if not self.current_window:
+            return
         self.stop_threads()
         if not self.validate_column_for_metric():
             return
