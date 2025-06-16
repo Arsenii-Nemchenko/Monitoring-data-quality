@@ -90,7 +90,12 @@ class MonitoredFileWindow(QDialog):
     def _handle_add_click(self):
         if self.new_directory:
             if self.name_text.text().strip(" ") != "":
-                self.accept()
+                if not len(self.select_metrics.selected_options) == 0:
+                    self.accept()
+                else:
+                    self.select_metrics.setStyleSheet("border: 1px solid red;")
+                    QToolTip.showText(self.select_metrics.mapToGlobal(QPoint(0, self.select_metrics.height())),
+                                      "You have not chosen any metric")
             else:
                 self.name_text.setStyleSheet("border: 1px solid red;")
                 QToolTip.showText(self.name_text.mapToGlobal(QPoint(0, self.name_text.height())),
