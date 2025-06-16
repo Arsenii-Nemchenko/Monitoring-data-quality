@@ -161,7 +161,6 @@ class DBManager:
         try:
             with self._connect() as conn:
                 with conn.cursor() as cursor:
-                    print(f"I get {metric_type} {column}")
                     if column:
                         cursor.execute("""
                                             SELECT cm.value
