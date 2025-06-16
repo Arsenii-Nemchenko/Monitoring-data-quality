@@ -9,7 +9,6 @@ import sys
 from .calculation_thread import CalculationThread
 from .metric_factory import MetricFactory
 from .monitored_window import MonitoredFileWindow
-from .monitoring_thread import MonitoringThread
 from .multi_selected_combobox import MultiSelectComboBox
 from ..src.database_manager import DBManager
 from ..src.data_monitor import DataMonitor
@@ -17,7 +16,6 @@ from ..src.metric import *
 from .graph import GraphWidget
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
         self.calc_thread = None
@@ -32,13 +30,14 @@ class MainWindow(QMainWindow):
                                     UniqueValuesCountJson(), UniqueValuesCount(), AverageValue(), AverageValueJson()]
         self.metric_factory = MetricFactory()
         self.database_manager = DBManager(regular_metrics + column_metrics)
-        self.current_monitoring = None
         self.current_window = None
         self.current_columns = []
         self.working_directories = []
         self.monitored_file_window = MonitoredFileWindow(self.database_manager)
         self.monitored_files = {}
         self.monitored_file_windows = {}
+
+        self.mutex = QMutex()
         #Pivot layout
         layout = QHBoxLayout()
 
@@ -123,7 +122,7 @@ class MainWindow(QMainWindow):
         layout2_1.addWidget(self.select_metrics)
 
         #Calculate metric
-        self.calculate_button = QPushButton("Calculate")
+        self.calculate_button = QPushButton("Show")
         self.calculate_button.clicked.connect(self.calculate)
 
         layout2_1.addWidget(self.calculate_button)
@@ -163,7 +162,6 @@ class MainWindow(QMainWindow):
         layout_shown_metric.addWidget(self.show_metric)
         layout_shown_metric.addWidget(self.column_button)
 
-
         layout2.addLayout(layout2_1)
         layout2.addLayout(layout_shown_metric)
         layout2.addLayout(layout2_2)
@@ -179,16 +177,36 @@ class MainWindow(QMainWindow):
 
     def remove_selected_file(self):
         selected_item = self.file_list.currentItem()
-        if selected_item:
-            name = selected_item.text()
-            if name in self.monitored_files:
-                temp = self.monitored_files[name]
-                directory = temp.folder
-                self.working_directories.remove(directory)
-                del self.monitored_files[name]
+        if not selected_item:
+            return
 
-            row = self.file_list.row(selected_item)
-            self.file_list.takeItem(row)
+        self.stop_threads()
+
+        name = selected_item.text()
+
+        if name in self.monitored_files:
+            directory = self.monitored_files[name].folder
+
+            if self.monitor_thread and self.monitor_thread.name == name:
+                self.monitor_thread.stop()
+                self.monitor_thread = None
+                self.current_window = None
+
+            del self.monitored_files[name]
+            if name in self.monitored_file_windows:
+                del self.monitored_file_windows[name]
+
+            if directory in self.working_directories:
+                self.working_directories.remove(directory)
+
+        row = self.file_list.row(selected_item)
+        self.file_list.takeItem(row)
+
+        if not self.monitor_thread:
+            self.shown_graph.clear_graph()
+            self.column_button.clear()
+            self.current_columns = []
+            self.last_column = None
 
     def update_select_metrics(self):
         selected_types = self.metric_type_selector.selected_options
@@ -207,7 +225,7 @@ class MainWindow(QMainWindow):
 
         new_options = []
         for option in options:
-            if not self.current_monitoring is None and option == "DefinedPathCount" and self.current_monitoring.file_format.value.lower() != 'json':
+            if not self.monitor_thread is None and option == "DefinedPathCount" and self.monitor_thread.file_format.value.lower() != 'json':
                 continue
             new_options.append(option)
 
@@ -227,22 +245,72 @@ class MainWindow(QMainWindow):
     def update_current_metric(self):
         text = self.show_metric.currentText()
         if text != "Show" and self.calc_thread:
+            if not self.validate_column_for_metric():
+                self.stop_threads()
+                return
+
             if text in self.database_manager.get_column_metrics():
-                if not self.column_button.currentText()==self.last_column:
-                    self.calculate()
-                else:
-                    self.update_thread()
+
+                current_col = self.column_button.currentText()
+                if not current_col:
+                    if not self.validate_column():
+                        return
+                elif self.monitor_thread.file_format == FileType.JSON and not self.validate_jsonpath():
+
+                    if not self.validate_column():
+                        return
+
+                # Update only if column changed
+                if current_col != self.last_column:
+                    self.last_column = current_col
+                self.update_thread()
             else:
                 self.update_thread()
+        else:
+            self.shown_graph.clear_graph()
 
     def validate_jsonpath(self):
-        if self.current_monitoring and self.current_monitoring.file_format == FileType.JSON:
+        if self.monitor_thread and self.monitor_thread.file_format == FileType.JSON:
             pattern = r'^\$(\.\*|\.\w[\w\s]*|\[\"[^\"]+\"\]|\[\d+\]|\[\*\])+$'
             return bool(re.fullmatch(pattern, self.line_edit.text()))
         return True
 
     def save_column(self):
         self.last_column = self.line_edit.text()
+
+    def validate_column_for_metric(self):
+        current_metrics = []
+        for i in range(0, self.show_metric.count()):
+            if self.show_metric.itemText(i) != "Show":
+                current_metrics.append(self.show_metric.itemText(i))
+
+        column_metrics = self.database_manager.get_column_metrics()
+
+        # Only validate if the selected metrics contain a column metric
+        if any(current_metric in column_metrics for current_metric in current_metrics):
+            if not self.monitor_thread:
+                QMessageBox.warning(self, "Warning", "No monitoring configuration selected")
+                self.shown_graph.clear_graph()
+                return False
+
+            # For JSON files, check if JSON path is valid
+            if self.monitor_thread.file_format == FileType.JSON:
+                if not self.line_edit.text() or not self.validate_jsonpath():
+                    QMessageBox.warning(self, "Column Required",
+                                        f"Please enter a valid JSON path")
+                    self.shown_graph.clear_graph()
+                    return False
+                return True
+
+            # For other formats, check if a column is selected
+            if not self.column_button.currentText():
+                QMessageBox.warning(self, "Column Required",
+                                    f"Please select a column")
+                self.shown_graph.clear_graph()
+                return False
+
+        return True
+
 
     #Getting directory and setting up the data
     def _get_working_directory(self):
@@ -263,19 +331,20 @@ class MainWindow(QMainWindow):
 
                 state = {"description": data_description, "metric_types": metric_types_selected,
                          "time": time_interval, "column_metrics": selected_column_metrics,
-                         "regular_metrics": selected_regular_metrics, "directory": new_directory, "name": name, "file_format": file_format}
+                         "regular_metrics": selected_regular_metrics, "directory": new_directory, "name": name, "file_format": file_format, "column": None}
                 self.monitored_file_windows[name] = state
                 self.monitored_files[name] = DataMonitor(name, new_directory, data_description, selected_regular_metrics, selected_column_metrics,
-                                                         file_format,self.database_manager, self.column_button.currentText())
+                                                         file_format,self.database_manager, self.column_button.currentText(), time_interval)
 
                 self.add_monitored_item(name, file_format, new_directory)
                 self.working_directories.append(new_directory)
 
                 #Setting up the widgets according to the data
                 if self.current_window is None:
-                    self.current_monitoring = self.monitored_files.get(name)
+                    self.monitor_thread = self.monitored_files.get(name)
                     self.current_window = state
                     self.load_interface(metric_types_selected, selected_column_metrics, selected_regular_metrics, time_interval)
+                    self.load_columns_from_directory()
         except OSError:
             pass
 
@@ -295,6 +364,7 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
 
         list_item = QListWidgetItem()
+        list_item.setData(Qt.UserRole, name)
         list_item.setToolTip(directory)
         list_item.setSizeHint(widget.sizeHint())
 
@@ -302,35 +372,54 @@ class MainWindow(QMainWindow):
         self.file_list.setItemWidget(list_item, widget)
 
     def load_columns_from_directory(self):
-        result = []
-        for filename in os.listdir(self.current_monitoring.folder):
-            file_path = os.path.join(self.current_monitoring.folder, filename)
-            try:
-                if self.current_monitoring.file_format == FileType.CSV and filename.endswith(".csv"):
+        try:
+            self.current_columns = []
+            for filename in os.listdir(self.monitor_thread.folder):
+                file_path = os.path.join(self.monitor_thread.folder, filename)
+
+                if self.monitor_thread.file_format == FileType.CSV and filename.endswith(".csv"):
                     df = pd.read_csv(file_path, nrows=1)
-                    result = result + df.columns.tolist()
-                elif self.current_monitoring.file_format == FileType.PARQUET and filename.endswith(".parquet"):
+                    self.current_columns = df.columns.tolist()
+
+                elif self.monitor_thread.file_format == FileType.PARQUET and filename.endswith(".parquet"):
                     table = pq.read_table(file_path)
-                    result = result + table.schema.names
-            except Exception as e:
-                print(f"Error reading file {file_path}: {e}")
-        return result
+                    self.current_columns = table.schema.names
+
+            self.column_button.clear()
+
+            if self.current_columns:
+                self.column_button.addItems(self.current_columns)
+                self.last_column = (
+                        self.current_window.get("column") or
+                        self.current_columns[0]
+                )
+                if self.monitor_thread.file_format == FileType.JSON:
+                    self.column_button.setCurrentText(self.last_column)
+        except Exception as e:
+            print(f"Error reading columns from directory: {e}")
+            self.current_columns = []
 
     def reload_current_directory(self, item):
+        name = item.data(Qt.UserRole)
+        if not name or name not in self.monitored_files:
+            QMessageBox.warning(self, "Error", "Invalid directory selection")
+            return
+
+        # Stop existing threads
+        self.stop_threads()
         self.save_changes()
-        self.current_monitoring = self.monitored_files.get(item.text())
-        self.current_window = self.monitored_file_windows.get(item.text())
 
-        metric_types_selected = self.current_window.get("metric_types")
-        time_interval = self.current_window.get("time")
-        selected_column_metrics = self.current_window.get("column_metrics")
-        selected_regular_metrics = self.current_window.get("regular_metrics")
+        self.monitor_thread = self.monitored_files[name]
+        self.current_window = self.monitored_file_windows[name]
 
-        self.load_interface(metric_types_selected, selected_column_metrics, selected_regular_metrics, time_interval)
+        self.load_interface(
+            self.current_window.get("metric_types", set()),
+            self.current_window.get("column_metrics", []),
+            self.current_window.get("regular_metrics", []),
+            self.current_window.get("time")
+        )
 
-        self.current_columns = self.load_columns_from_directory()
-        self.column_button.clear()
-        self.column_button.addItems(self.current_columns)
+        self.load_columns_from_directory()
 
     def load_interface(self, metric_types_selected, selected_column_metrics, selected_regular_metrics, time_interval):
         self.metric_type_selector.set_selected_options(metric_types_selected)
@@ -353,6 +442,7 @@ class MainWindow(QMainWindow):
         self.divide_metrics(selected_metrics, selected_column, selected_regular)
         self.current_window["column_metrics"] = selected_column
         self.current_window["regular_metrics"] = selected_regular
+        self.current_window["column"] = self.last_column
 
     def divide_metrics(self, selected, selected_column, selected_regular):
         column = self.database_manager.get_column_metrics()
@@ -364,68 +454,110 @@ class MainWindow(QMainWindow):
                 selected_regular.append(metric)
 
     def calculate(self):
-        if self.calc_thread and hasattr(self, 'calc_thread') and self.calc_thread.isRunning():
-            self.calc_thread.stop()
-            self.calc_thread.wait()
-
-        if self.monitor_thread and hasattr(self, 'monitor_thread') and self.monitor_thread.isRunning():
-            self.monitor_thread.stop()
-            self.monitor_thread.wait()
+        self.stop_threads()
+        if not self.validate_column_for_metric():
+            return
 
         self.update_shown_metric()
+        self.start_threads()
 
+    def start_threads(self):
+        # Create new DataMonitor instance with current settings
         name = self.current_window.get("name")
         directory = self.current_window.get("directory")
         data_description = self.current_window.get("description")
-        regular_metrics_names = []
-        column_metrics_names = []
         file_format = self.current_window.get("file_format")
-        self.divide_metrics(self.select_metrics.selected_options, column_metrics_names, regular_metrics_names)
+
+        column_metrics_names = []
+        regular_metrics_names = []
+        self.divide_metrics([self.show_metric.currentText()], column_metrics_names, regular_metrics_names)
 
         regular_metrics = [self.metric_factory.get(name, file_format) for name in regular_metrics_names]
         column_metrics = [self.metric_factory.get(name, file_format) for name in column_metrics_names]
 
-        processed_files = self.current_monitoring.processed_files
-        data_batch_files = self.current_monitoring.batch_files
-        self.current_monitoring = DataMonitor(name ,directory, data_description,
-                                                  regular_metrics, column_metrics, file_format, self.database_manager, self.column_button.currentText())
-        self.current_monitoring.processed_files = processed_files
-        self.current_monitoring.batch_files = data_batch_files
-        #Probably not needed
-        self.monitored_files[name] = self.current_monitoring
+        was_before = False
+        processed_files = None
+        data_batch_files = None
+        # Create new monitor thread
+        if self.monitor_thread:
+            was_before = True
+            processed_files = self.monitor_thread.processed_files
+            data_batch_files = self.monitor_thread.batch_files
 
-        self.start_threads()
-
-    def start_threads(self):
-        self.monitor_thread = MonitoringThread(
-            monitoring=self.current_monitoring,
-            interval=self.time_interval_input.value()
+        self.monitor_thread = DataMonitor(
+            name, directory, data_description,
+            regular_metrics, column_metrics,
+            file_format, self.database_manager,
+            self.column_button.currentText(), self.time_interval_input.value()
         )
+        if was_before:
+            self.monitor_thread.processed_files = processed_files
+            self.monitor_thread.batch_files = data_batch_files
+
+        self.monitor_thread.invalid_json_path.connect(self.handle_invalid_json_path)
         self.monitor_thread.start()
 
+        is_column_metric = True if self.show_metric.currentText() in self.database_manager.get_column_metrics() else False
         self.calc_thread = CalculationThread(
             graph_widget=self.shown_graph,
-            monitoring=self.current_monitoring,
+            monitoring=self.monitor_thread,
             metric_name=self.show_metric.currentText(),
-            interval_sec=self.time_interval_input.value(),
-            column=self.last_column
+            interval=self.time_interval_input.value(),
+            column=self.column_button.currentText(),
+            is_column_metric=is_column_metric
         )
         self.calc_thread.start()
 
-    def update_thread(self):
-        if self.calc_thread and hasattr(self, 'calc_thread') and self.calc_thread.isRunning():
-            self.calc_thread.stop()
-            self.calc_thread.wait()
+    def stop_threads(self):
+        if hasattr(self, 'calc_thread') and self.calc_thread:
+            try:
+                self.calc_thread.stop()
+                if not self.calc_thread.wait(500):
+                    self.calc_thread.terminate()
+                self.calc_thread.deleteLater()
+            except Exception as e:
+                print(f"Error stopping calculation thread: {e}")
+            finally:
+                self.calc_thread = None
 
+        if hasattr(self, 'monitor_thread') and self.monitor_thread:
+            self.monitor_thread.stop()
+
+    def update_thread(self):
+        try:
+            self.stop_threads()
+
+            is_column_metric = True if self.show_metric.currentText() in self.database_manager.get_column_metrics() else False
             self.calc_thread = CalculationThread(
                 graph_widget=self.shown_graph,
-                monitoring=self.current_monitoring,
+                monitoring=self.monitor_thread,
                 metric_name=self.show_metric.currentText(),
-                interval_sec=self.time_interval_input.value(),
-                column=self.last_column
+                interval=self.time_interval_input.value(),
+                column=self.column_button.currentText(),
+                is_column_metric=is_column_metric
             )
-            self.calc_thread.start()
 
+            regular_metrics_names = []
+            column_metrics_names = []
+            file_format = self.current_window.get("file_format")
+            self.divide_metrics([self.show_metric.currentText()], column_metrics_names, regular_metrics_names)
+
+            regular_metrics = [self.metric_factory.get(name, file_format) for name in regular_metrics_names]
+            column_metrics = [self.metric_factory.get(name, file_format) for name in column_metrics_names]
+
+            self.monitor_thread.set_arguments(regular_metrics, column_metrics, self.column_button.currentText(), self.time_interval_input.value())
+
+            self.monitor_thread.start()
+            self.calc_thread.start()
+        except Exception as e:
+            print(f"I got error updating threads {e}")
+            self.shown_graph.clear_graph()
+
+    def handle_invalid_json_path(self):
+        self.stop_threads()
+        QMessageBox.warning(self, "Invalid JSON Path",
+                            "The specified JSON path was not found. Please select a valid path.")
+        self.shown_graph.clear_graph()
 
 
 
