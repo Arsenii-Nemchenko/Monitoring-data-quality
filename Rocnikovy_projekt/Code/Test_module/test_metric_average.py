@@ -4,7 +4,7 @@ import os
 import pandas as pd
 from unittest import TestCase
 
-from  src.metric import AverageValue, AverageValueJson
+from  ..src.metric import AverageValue, AverageValueJson
 
 class TestClass(TestCase):
     def test_average_value_column_CSV_case1(self):

@@ -4,7 +4,7 @@ import os
 import pandas as pd
 from unittest import TestCase
 
-from src.metric import UniqueValuesCount, UniqueValuesCountJson
+from ..src.metric import UniqueValuesCount, UniqueValuesCountJson
 
 class TestClass(TestCase):
     def test_unique_count_column_CSV_case1(self):

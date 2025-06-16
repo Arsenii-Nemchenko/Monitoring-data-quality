@@ -3,7 +3,7 @@ import os
 import trace
 from unittest import TestCase
 
-from src.metric import DefinedPathCount
+from ..src.metric import DefinedPathCount
 
 class TestClass(TestCase):
 

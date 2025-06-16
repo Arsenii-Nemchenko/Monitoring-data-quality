@@ -3,8 +3,8 @@ from unittest import TestCase
 import pandas as pd
 import json
 
-from src.metric import EmptyObjectCount
-from src.metric import EmptyRecordCount
+from ..src.metric import EmptyObjectCount
+from ..src.metric import EmptyRecordCount
 
 
 class TestClass(TestCase):

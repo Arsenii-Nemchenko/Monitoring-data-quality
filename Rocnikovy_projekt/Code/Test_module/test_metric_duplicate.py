@@ -4,7 +4,7 @@ import pandas as pd
 import json
 from unittest import TestCase
 
-from src.metric import DuplicateRecordCount
+from ..src.metric import DuplicateRecordCount
 
 
 class TestClass(TestCase):
