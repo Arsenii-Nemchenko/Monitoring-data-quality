@@ -1,0 +1,17 @@
+The basic sequence after the start of the application:
+	- Press the plus button, the setup window will pop up
+	- Set up the name, folder
+	- Pick the file format of a files that will be monitored inside of a folder
+	- Pick metric type, metrics and time interval
+	- You can write a description if needed
+	- Click add monitoring button
+
+This will add a monitoring, if needed press the plus button again and add repeat the basic sequence.
+	- Choose the column/json-path in column section
+	- Press "Show" button
+	- The metric chosen in "Show metrics" will be shown
+	- Select metrics will be copied to "Show metrics" drop list
+	
+...
+If needed switch the monitoring in the left side window by clicking the monitoring you want.
+	
